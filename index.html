@@ -2,27 +2,26 @@
 <html lang="zh">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>链接池管理</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #f4f4f4;
+      background-color: #f4f4f4;
       margin: 0;
       padding: 0;
     }
     .container {
       width: 90%;
       max-width: 800px;
-      margin: 40px auto;
+      margin: 50px auto;
       background: #fff;
       padding: 20px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
       border-radius: 10px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     }
     h1 {
       text-align: center;
-      color: #333;
     }
     .link-form {
       display: flex;
@@ -32,61 +31,45 @@
     .link-form input {
       flex: 1;
       padding: 10px;
-      font-size: 16px;
+      border: 1px solid #ddd;
       border-radius: 5px;
-      border: 1px solid #ccc;
     }
     .link-form button {
-      padding: 10px 16px;
-      font-size: 16px;
-      background: #28a745;
-      color: white;
+      padding: 10px 20px;
       border: none;
+      background: #4CAF50;
+      color: #fff;
       border-radius: 5px;
       cursor: pointer;
     }
     .link-form button:hover {
-      background: #218838;
+      background: #45a049;
     }
     .link-item {
       display: flex;
       justify-content: space-between;
-      align-items: center;
-      background: #f9f9f9;
-      border: 1px solid #ddd;
       padding: 10px;
       margin-bottom: 10px;
+      background: #f9f9f9;
       border-radius: 5px;
+      border: 1px solid #ddd;
     }
     .link-item button {
-      background: #dc3545;
+      background: #f44336;
+      color: #fff;
       border: none;
-      color: white;
-      padding: 6px 12px;
+      padding: 5px 10px;
       border-radius: 5px;
       cursor: pointer;
     }
     .link-item button:hover {
-      background: #c82333;
+      background: #d32f2f;
     }
     .status {
-      margin-top: 20px;
       text-align: center;
-      font-weight: bold;
-      color: #555;
-    }
-    .save-btn {
-      width: 100%;
-      padding: 12px;
-      font-size: 16px;
-      background: #007bff;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-    .save-btn:hover {
-      background: #0069d9;
+      font-size: 14px;
+      margin-top: 15px;
+      color: #666;
     }
   </style>
 </head>
@@ -94,65 +77,67 @@
   <div class="container">
     <h1>链接池管理</h1>
     <div class="link-form">
-      <input type="url" id="new-link" placeholder="请输入新链接" />
+      <input type="url" id="new-link" placeholder="输入新链接，例如 https://example.com" />
       <button onclick="addLink()">添加</button>
     </div>
     <div id="link-list"></div>
-    <button class="save-btn" onclick="saveLinks()">💾 保存链接池</button>
-    <div id="status" class="status"></div>
+    <button onclick="saveLinks()">保存链接池到 KV</button>
+    <div class="status" id="status"></div>
   </div>
 
   <script>
-    const apiBase = "/api/links"; // 如部署到 Cloudflare Pages，请改为完整 Worker 地址
-
-    let links = [];
+    const apiBase = "https://a-b-frosty-tree-ac99.youihim1234.workers.dev/api/links";
 
     async function fetchLinks() {
       try {
         const res = await fetch(apiBase);
-        const data = await res.json();
-        links = data.links || [];
-        renderList();
-        showStatus("链接池已加载");
+        const json = await res.json();
+        const links = json.links || [];
+        localStorage.setItem("linkPool", JSON.stringify(links));
+        renderLinks(links);
+        showStatus("✅ 加载成功，共 " + links.length + " 个链接", "green");
       } catch (err) {
-        showStatus("❌ 加载失败，请检查网络或 Worker 地址");
+        showStatus("❌ 加载失败，请检查网络或 Worker 地址", "red");
       }
     }
 
-    function renderList() {
-      const listEl = document.getElementById("link-list");
-      listEl.innerHTML = "";
+    function renderLinks(links) {
+      const list = document.getElementById("link-list");
+      list.innerHTML = "";
       links.forEach((link, i) => {
-        const item = document.createElement("div");
-        item.className = "link-item";
-        item.innerHTML = `
+        const div = document.createElement("div");
+        div.className = "link-item";
+        div.innerHTML = `
           <span>${link}</span>
-          <button onclick="deleteLink(${i})">删除</button>
+          <button onclick="removeLink(${i})">删除</button>
         `;
-        listEl.appendChild(item);
+        list.appendChild(div);
       });
     }
 
     function addLink() {
       const input = document.getElementById("new-link");
-      const newLink = input.value.trim();
-      if (!newLink) {
-        showStatus("❗ 链接不能为空");
-        return;
-      }
-      links.push(newLink);
+      const value = input.value.trim();
+      if (!value) return showStatus("请输入有效链接", "red");
+      const links = JSON.parse(localStorage.getItem("linkPool") || "[]");
+      links.push(value);
+      localStorage.setItem("linkPool", JSON.stringify(links));
       input.value = "";
-      renderList();
-      showStatus("✅ 链接已添加（尚未保存）");
+      renderLinks(links);
+      showStatus("✅ 添加成功", "green");
     }
 
-    function deleteLink(index) {
+    function removeLink(index) {
+      const links = JSON.parse(localStorage.getItem("linkPool") || "[]");
       links.splice(index, 1);
-      renderList();
-      showStatus("🗑️ 链接已删除（尚未保存）");
+      localStorage.setItem("linkPool", JSON.stringify(links));
+      renderLinks(links);
+      showStatus("✅ 删除成功", "green");
     }
 
     async function saveLinks() {
+      const links = JSON.parse(localStorage.getItem("linkPool") || "[]");
+      if (links.length === 0) return showStatus("⚠️ 链接池为空，无法保存", "red");
       try {
         const res = await fetch(apiBase, {
           method: "POST",
@@ -160,20 +145,21 @@
           body: JSON.stringify({ links })
         });
         if (res.ok) {
-          showStatus("✅ 链接池已保存成功！");
+          showStatus("✅ 链接池已保存到 KV", "green");
         } else {
-          showStatus("❌ 保存失败，请稍后重试");
+          showStatus("❌ 保存失败，请稍后再试", "red");
         }
-      } catch (err) {
-        showStatus("❌ 网络错误，保存失败");
+      } catch (e) {
+        showStatus("❌ 网络异常，保存失败", "red");
       }
     }
 
-    function showStatus(msg) {
-      document.getElementById("status").textContent = msg;
+    function showStatus(msg, color = "gray") {
+      const el = document.getElementById("status");
+      el.textContent = msg;
+      el.style.color = color;
     }
 
-    // 初始化
     fetchLinks();
   </script>
 </body>
