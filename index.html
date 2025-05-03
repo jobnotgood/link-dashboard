@@ -1,0 +1,36 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>链接分流管理后台</title>
+</head>
+<body>
+  <h1>欢迎使用链接分流管理后台</h1>
+  <form id="loginForm">
+    <label for="username">账号：</label>
+    <input type="text" id="username" required><br><br>
+    <label for="password">密码：</label>
+    <input type="password" id="password" required><br><br>
+    <button type="submit">登录</button>
+  </form>
+  <div id="app" style="display:none;">
+    <h2>已登录</h2>
+    <p>这里是链接管理界面（功能开发中）</p>
+  </div>
+  <script>
+    document.getElementById('loginForm').onsubmit = function(e) {
+      e.preventDefault();
+      const u = document.getElementById('username').value;
+      const p = document.getElementById('password').value;
+      if (u === 'admin' && p === 'admin123') {
+        document.getElementById('loginForm').style.display = 'none';
+        document.getElementById('app').style.display = 'block';
+      } else {
+        alert('账号或密码错误');
+      }
+    }
+  </script>
+</body>
+</html>
