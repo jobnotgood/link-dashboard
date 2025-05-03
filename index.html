@@ -1,36 +1,122 @@
-
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>链接分流管理后台</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 2em;
+      background: #f7f8fa;
+    }
+    h1 {
+      color: #333;
+    }
+    input {
+      padding: 0.5em;
+      margin: 0.25em;
+      width: 60%;
+    }
+    button {
+      padding: 0.5em 1em;
+      margin: 0.25em;
+      background-color: #4caf50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    ul {
+      list-style-type: none;
+      padding-left: 0;
+    }
+    li {
+      margin-bottom: 0.5em;
+    }
+  </style>
 </head>
 <body>
-  <h1>欢迎使用链接分流管理后台</h1>
-  <form id="loginForm">
-    <label for="username">账号：</label>
-    <input type="text" id="username" required><br><br>
-    <label for="password">密码：</label>
-    <input type="password" id="password" required><br><br>
-    <button type="submit">登录</button>
-  </form>
-  <div id="app" style="display:none;">
-    <h2>已登录</h2>
-    <p>这里是链接管理界面（功能开发中）</p>
+
+  <h1>🔗 链接分流管理后台</h1>
+
+  <div>
+    <input type="text" id="newLink" placeholder="请输入新链接，例如 https://example.com" />
+    <button onclick="addLink()">添加</button>
+    <button onclick="saveLinks()">保存全部</button>
   </div>
+
+  <ul id="linkList"></ul>
+
   <script>
-    document.getElementById('loginForm').onsubmit = function(e) {
-      e.preventDefault();
-      const u = document.getElementById('username').value;
-      const p = document.getElementById('password').value;
-      if (u === 'admin' && p === 'admin123') {
-        document.getElementById('loginForm').style.display = 'none';
-        document.getElementById('app').style.display = 'block';
-      } else {
-        alert('账号或密码错误');
+    async function loadLinks() {
+      try {
+        const res = await fetch('/api/links');
+        if (!res.ok) throw new Error('读取失败');
+        const data = await res.json();
+
+        const list = document.getElementById('linkList');
+        list.innerHTML = '';
+
+        (data.links || []).forEach((url, index) => {
+          const li = document.createElement('li');
+          li.innerHTML = `
+            <input type="text" value="${url}" />
+            <button onclick="deleteLink(this)">删除</button>
+          `;
+          list.appendChild(li);
+        });
+      } catch (err) {
+        alert('❌ 无法加载链接池：' + err.message);
       }
     }
+
+    function addLink() {
+      const url = document.getElementById('newLink').value.trim();
+      if (!url) return alert('请输入链接');
+
+      const list = document.getElementById('linkList');
+      const li = document.createElement('li');
+      li.innerHTML = `
+        <input type="text" value="${url}" />
+        <button onclick="deleteLink(this)">删除</button>
+      `;
+      list.appendChild(li);
+      document.getElementById('newLink').value = '';
+    }
+
+    function deleteLink(button) {
+      const li = button.parentNode;
+      li.parentNode.removeChild(li);
+    }
+
+    async function saveLinks() {
+      const inputs = document.querySelectorAll('#linkList input');
+      const links = [];
+
+      inputs.forEach(input => {
+        const val = input.value.trim();
+        if (val) links.push(val);
+      });
+
+      try {
+        await fetch('/api/links', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ links }),
+        });
+        alert('✅ 保存成功');
+      } catch (err) {
+        alert('❌ 保存失败：' + err.message);
+      }
+    }
+
+    // 初始化加载
+    loadLinks();
   </script>
+
 </body>
 </html>
