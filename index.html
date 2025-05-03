@@ -176,4 +176,18 @@
         fetchLinks();
     </script>
 </body>
+    const apiBase = "/api/links";
+
+// 获取链接池（GET）
+fetch(apiBase).then(res => res.json()).then(data => {
+    console.log(data.links);
+});
+
+// 保存链接池（POST）
+fetch(apiBase, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ links: ["https://a.com", "https://b.com"] })
+});
+
 </html>
