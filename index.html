@@ -1,69 +1,137 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>链接统计</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>点击量统计</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.0.3/dist/tailwind.min.css" rel="stylesheet">
   <style>
     body {
       font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      background-color: #f0f0f0;
+      background-color: #f4f4f4;
+      padding: 20px;
     }
     .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background-color: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    h1 {
       text-align: center;
+      font-size: 2rem;
+      margin-bottom: 30px;
+    }
+    .chart-container {
+      margin-top: 30px;
+    }
+    .button {
+      background-color: #4CAF50;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      font-size: 1rem;
+      margin-bottom: 20px;
+      cursor: pointer;
+    }
+    .button:hover {
+      background-color: #45a049;
+    }
+    .link-list {
+      margin-top: 30px;
+      padding: 10px;
+      background-color: #f9f9f9;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     }
     .link-item {
-      background-color: #fff;
-      padding: 10px;
-      margin: 10px 0;
-      border-radius: 8px;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    }
-    .link-item input {
-      width: 80%;
-      padding: 5px;
-    }
-    .link-item span {
-      margin-left: 10px;
-      font-weight: bold;
+      margin-bottom: 10px;
     }
   </style>
 </head>
 <body>
+
   <div class="container">
-    <h1>链接点击统计</h1>
-    <div id="linkList"></div>
-    <script>
-      async function fetchLinks() {
+    <h1>点击量统计</h1>
+
+    <div class="chart-container">
+      <canvas id="clickChart"></canvas>
+    </div>
+
+    <button class="button" onclick="refreshStats()">刷新数据</button>
+
+    <div class="link-list">
+      <h2>链接池管理</h2>
+      <div id="linkList"></div>
+    </div>
+  </div>
+
+  <script>
+    // 获取点击量数据并更新图表
+    async function refreshStats() {
+      try {
         const res = await fetch('/api/links');
         const data = await res.json();
+        
         const links = data.links || [];
-        renderList(links);
-      }
+        const clickStats = links.map(link => link.clicks || 0);
 
-      function renderList(links) {
-        const list = document.getElementById('linkList');
-        list.innerHTML = '';
-        links.forEach((link, index) => {
-          const div = document.createElement('div');
-          div.className = 'link-item';
-          div.innerHTML = `
-            <input value="${link.url}" onchange="updateLink(${index}, this.value)" />
-            <span>点击量: ${link.clickCount || 0}</span>
-            <button onclick="removeLink(${index})">删除</button>
-          `;
-          list.appendChild(div);
-        });
+        updateChart(links.map((_, index) => `链接 ${index + 1}`), clickStats);
+        updateLinkList(links);
+      } catch (error) {
+        console.error("获取统计数据失败", error);
       }
+    }
 
-      fetchLinks();
-    </script>
-  </div>
+    // 更新图表
+    function updateChart(labels, data) {
+      const ctx = document.getElementById('clickChart').getContext('2d');
+      const chartData = {
+        labels: labels,
+        datasets: [{
+          label: '点击量',
+          data: data,
+          backgroundColor: 'rgba(75, 192, 192, 0.2)',
+          borderColor: 'rgba(75, 192, 192, 1)',
+          borderWidth: 1
+        }]
+      };
+
+      new Chart(ctx, {
+        type: 'bar',
+        data: chartData,
+        options: {
+          responsive: true,
+          scales: {
+            y: {
+              beginAtZero: true
+            }
+          }
+        }
+      });
+    }
+
+    // 更新链接池列表
+    function updateLinkList(links) {
+      const linkListDiv = document.getElementById('linkList');
+      linkListDiv.innerHTML = '';  // 清空现有链接列表
+
+      links.forEach((link, index) => {
+        const linkDiv = document.createElement('div');
+        linkDiv.classList.add('link-item');
+        linkDiv.innerHTML = `<strong>链接 ${index + 1}:</strong> <a href="${link.url}" target="_blank">${link.url}</a> | 点击量: ${link.clicks || 0}`;
+        linkListDiv.appendChild(linkDiv);
+      });
+    }
+
+    // 初次加载时获取数据并更新图表
+    refreshStats();
+  </script>
+
 </body>
 </html>
