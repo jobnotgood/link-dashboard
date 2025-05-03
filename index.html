@@ -3,61 +3,73 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>链接池管理面板</title>
+  <title>链接池管理</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
+      font-family: sans-serif;
+      background: #f4f4f4;
       padding: 20px;
-      background: #f8f9fa;
-    }
-    h2 {
-      margin-bottom: 1rem;
     }
     input {
       padding: 6px;
-      margin-right: 6px;
+      margin-right: 8px;
+      width: 300px;
     }
     button {
-      padding: 6px 10px;
+      padding: 6px 12px;
       margin-right: 6px;
       cursor: pointer;
     }
     .link-item {
-      margin-bottom: 10px;
+      margin-top: 10px;
+    }
+    .link-item input {
+      width: 300px;
     }
   </style>
 </head>
 <body>
-  <h2>🔗 链接池管理</h2>
+  <h2>🔗 链接池管理（自动平均分流）</h2>
 
-  <div>
-    <input id="urlInput" placeholder="请输入链接" />
-    <input id="weightInput" type="number" placeholder="权重（默认 1）" />
-    <button onclick="addLink()">添加链接</button>
-    <button onclick="saveLinks()">保存到后端</button>
+  <div style="margin-bottom: 20px;">
+    <input id="newUrl" placeholder="请输入新链接" />
+    <button onclick="addLink()">添加</button>
+    <button onclick="saveLinks()">保存</button>
   </div>
 
-  <div id="list" style="margin-top: 20px;"></div>
+  <div id="linkList"></div>
 
   <script>
-    const API_BASE = 'https://a-b-frosty-tree-ac99.youihim1234.workers.dev/api/links';
+    const API = 'https://a-b-frosty-tree-ac99.youihim1234.workers.dev/api/links';
     let links = [];
 
     async function fetchLinks() {
-      const res = await fetch(API_BASE);
+      const res = await fetch(API);
       const data = await res.json();
       links = data.links || [];
       renderList();
     }
 
+    function renderList() {
+      const list = document.getElementById('linkList');
+      list.innerHTML = '';
+      links.forEach((link, index) => {
+        const div = document.createElement('div');
+        div.className = 'link-item';
+        div.innerHTML = `
+          <input value="${link}" onchange="updateLink(${index}, this.value)" />
+          <button onclick="removeLink(${index})">删除</button>
+        `;
+        list.appendChild(div);
+      });
+    }
+
     function addLink() {
-      const url = document.getElementById('urlInput').value.trim();
-      const weight = parseInt(document.getElementById('weightInput').value) || 1;
+      const url = document.getElementById('newUrl').value.trim();
       if (!url) return alert('请输入链接');
-      links.push({ url, weight });
+      links.push(url);
+      document.getElementById('newUrl').value = '';
       renderList();
-      document.getElementById('urlInput').value = '';
-      document.getElementById('weightInput').value = '';
     }
 
     function removeLink(index) {
@@ -65,29 +77,19 @@
       renderList();
     }
 
+    function updateLink(index, value) {
+      links[index] = value;
+    }
+
     async function saveLinks() {
-      const res = await fetch(API_BASE, {
+      const formatted = links.map(url => ({ url }));
+      const res = await fetch(API, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ links })
+        body: JSON.stringify({ links: formatted })
       });
       const data = await res.json();
       alert(data.message || '保存成功');
-    }
-
-    function renderList() {
-      const listEl = document.getElementById('list');
-      listEl.innerHTML = '';
-      links.forEach((link, idx) => {
-        const div = document.createElement('div');
-        div.className = 'link-item';
-        div.innerHTML = `
-          <span>🔗 ${link.url}</span>
-          <span>（权重：${link.weight}）</span>
-          <button onclick="removeLink(${idx})">删除</button>
-        `;
-        listEl.appendChild(div);
-      });
     }
 
     fetchLinks();
