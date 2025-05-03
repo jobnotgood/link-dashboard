@@ -1,122 +1,179 @@
 <!DOCTYPE html>
 <html lang="zh">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>链接分流管理后台</title>
-  <style>
-    body {
-      font-family: sans-serif;
-      padding: 2em;
-      background: #f7f8fa;
-    }
-    h1 {
-      color: #333;
-    }
-    input {
-      padding: 0.5em;
-      margin: 0.25em;
-      width: 60%;
-    }
-    button {
-      padding: 0.5em 1em;
-      margin: 0.25em;
-      background-color: #4caf50;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-    button:hover {
-      background-color: #45a049;
-    }
-    ul {
-      list-style-type: none;
-      padding-left: 0;
-    }
-    li {
-      margin-bottom: 0.5em;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>链接池管理</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .container {
+            width: 90%;
+            margin: 50px auto;
+            max-width: 800px;
+            padding: 20px;
+            background: white;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .link-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        .link-item button {
+            background-color: #f44336;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        .link-item button:hover {
+            background-color: #d32f2f;
+        }
+        .link-form {
+            margin: 20px 0;
+            display: flex;
+            justify-content: space-between;
+        }
+        .link-form input {
+            width: 80%;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+        .link-form button {
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .link-form button:hover {
+            background-color: #45a049;
+        }
+        .status {
+            text-align: center;
+            padding: 10px;
+            margin-top: 20px;
+            font-size: 1.2em;
+            color: #d32f2f;
+        }
+    </style>
 </head>
 <body>
+    <div class="container">
+        <h1>链接池管理</h1>
+        <div class="link-form">
+            <input type="url" id="new-link" placeholder="输入新链接" />
+            <button onclick="addLink()">添加链接</button>
+        </div>
+        <div id="link-list"></div>
+        <div id="status" class="status"></div>
+        <button onclick="saveLinks()">保存链接池</button>
+    </div>
 
-  <h1>🔗 链接分流管理后台</h1>
+    <script>
+        const apiBase = "/api/links"; // 请求链接池API的基础URL
 
-  <div>
-    <input type="text" id="newLink" placeholder="请输入新链接，例如 https://example.com" />
-    <button onclick="addLink()">添加</button>
-    <button onclick="saveLinks()">保存全部</button>
-  </div>
+        // 获取当前的链接池
+        async function fetchLinks() {
+            try {
+                const response = await fetch(apiBase);
+                if (!response.ok) {
+                    showStatus("无法加载链接池", "error");
+                    return;
+                }
+                const data = await response.json();
+                renderLinkList(data.links || []);
+            } catch (error) {
+                showStatus("网络错误，请稍后再试", "error");
+            }
+        }
 
-  <ul id="linkList"></ul>
+        // 渲染链接池列表
+        function renderLinkList(links) {
+            const listContainer = document.getElementById("link-list");
+            listContainer.innerHTML = ""; // 清空当前列表
 
-  <script>
-    async function loadLinks() {
-      try {
-        const res = await fetch('/api/links');
-        if (!res.ok) throw new Error('读取失败');
-        const data = await res.json();
+            links.forEach((link, index) => {
+                const linkItem = document.createElement("div");
+                linkItem.className = "link-item";
+                linkItem.innerHTML = `
+                    <span>${link}</span>
+                    <button onclick="removeLink(${index})">删除</button>
+                `;
+                listContainer.appendChild(linkItem);
+            });
+        }
 
-        const list = document.getElementById('linkList');
-        list.innerHTML = '';
+        // 添加新链接到列表
+        function addLink() {
+            const newLink = document.getElementById("new-link").value.trim();
+            if (!newLink) {
+                showStatus("链接不能为空", "error");
+                return;
+            }
+            const linkList = JSON.parse(localStorage.getItem("linkPool") || "[]");
+            linkList.push(newLink);
+            renderLinkList(linkList);
+            document.getElementById("new-link").value = "";
+            showStatus("链接已添加", "success");
+        }
 
-        (data.links || []).forEach((url, index) => {
-          const li = document.createElement('li');
-          li.innerHTML = `
-            <input type="text" value="${url}" />
-            <button onclick="deleteLink(this)">删除</button>
-          `;
-          list.appendChild(li);
-        });
-      } catch (err) {
-        alert('❌ 无法加载链接池：' + err.message);
-      }
-    }
+        // 删除链接
+        function removeLink(index) {
+            const linkList = JSON.parse(localStorage.getItem("linkPool") || "[]");
+            linkList.splice(index, 1);
+            renderLinkList(linkList);
+            showStatus("链接已删除", "success");
+        }
 
-    function addLink() {
-      const url = document.getElementById('newLink').value.trim();
-      if (!url) return alert('请输入链接');
+        // 保存更新后的链接池到后端 KV
+        async function saveLinks() {
+            const linkList = JSON.parse(localStorage.getItem("linkPool") || "[]");
+            if (linkList.length === 0) {
+                showStatus("链接池为空，无法保存", "error");
+                return;
+            }
 
-      const list = document.getElementById('linkList');
-      const li = document.createElement('li');
-      li.innerHTML = `
-        <input type="text" value="${url}" />
-        <button onclick="deleteLink(this)">删除</button>
-      `;
-      list.appendChild(li);
-      document.getElementById('newLink').value = '';
-    }
+            const response = await fetch(apiBase, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ links: linkList })
+            });
 
-    function deleteLink(button) {
-      const li = button.parentNode;
-      li.parentNode.removeChild(li);
-    }
+            if (!response.ok) {
+                showStatus("保存失败，请稍后再试", "error");
+                return;
+            }
+            showStatus("链接池已保存", "success");
+        }
 
-    async function saveLinks() {
-      const inputs = document.querySelectorAll('#linkList input');
-      const links = [];
+        // 显示状态信息
+        function showStatus(message, type = "error") {
+            const statusElement = document.getElementById("status");
+            statusElement.textContent = message;
+            statusElement.style.color = type === "error" ? "#f44336" : "#4CAF50";
+        }
 
-      inputs.forEach(input => {
-        const val = input.value.trim();
-        if (val) links.push(val);
-      });
-
-      try {
-        await fetch('/api/links', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ links }),
-        });
-        alert('✅ 保存成功');
-      } catch (err) {
-        alert('❌ 保存失败：' + err.message);
-      }
-    }
-
-    // 初始化加载
-    loadLinks();
-  </script>
-
+        // 初次加载时获取链接池
+        fetchLinks();
+    </script>
 </body>
 </html>
