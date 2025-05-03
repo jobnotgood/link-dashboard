@@ -2,162 +2,92 @@
 <html lang="zh">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>链接池管理</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>链接池管理面板</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background-color: #f4f4f4;
-      margin: 0;
-      padding: 0;
-    }
-    .container {
-      width: 90%;
-      max-width: 800px;
-      margin: 50px auto;
-      background: #fff;
       padding: 20px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-      border-radius: 10px;
+      background: #f8f9fa;
     }
-    h1 {
-      text-align: center;
+    h2 {
+      margin-bottom: 1rem;
     }
-    .link-form {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 20px;
+    input {
+      padding: 6px;
+      margin-right: 6px;
     }
-    .link-form input {
-      flex: 1;
-      padding: 10px;
-      border: 1px solid #ddd;
-      border-radius: 5px;
-    }
-    .link-form button {
-      padding: 10px 20px;
-      border: none;
-      background: #4CAF50;
-      color: #fff;
-      border-radius: 5px;
+    button {
+      padding: 6px 10px;
+      margin-right: 6px;
       cursor: pointer;
-    }
-    .link-form button:hover {
-      background: #45a049;
     }
     .link-item {
-      display: flex;
-      justify-content: space-between;
-      padding: 10px;
       margin-bottom: 10px;
-      background: #f9f9f9;
-      border-radius: 5px;
-      border: 1px solid #ddd;
-    }
-    .link-item button {
-      background: #f44336;
-      color: #fff;
-      border: none;
-      padding: 5px 10px;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-    .link-item button:hover {
-      background: #d32f2f;
-    }
-    .status {
-      text-align: center;
-      font-size: 14px;
-      margin-top: 15px;
-      color: #666;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>链接池管理</h1>
-    <div class="link-form">
-      <input type="url" id="new-link" placeholder="输入新链接，例如 https://example.com" />
-      <button onclick="addLink()">添加</button>
-    </div>
-    <div id="link-list"></div>
-    <button onclick="saveLinks()">保存链接池到 KV</button>
-    <div class="status" id="status"></div>
+  <h2>🔗 链接池管理</h2>
+
+  <div>
+    <input id="urlInput" placeholder="请输入链接" />
+    <input id="weightInput" type="number" placeholder="权重（默认 1）" />
+    <button onclick="addLink()">添加链接</button>
+    <button onclick="saveLinks()">保存到后端</button>
   </div>
 
+  <div id="list" style="margin-top: 20px;"></div>
+
   <script>
-    const apiBase = "https://a-b-frosty-tree-ac99.youihim1234.workers.dev/api/links";
+    const API_BASE = 'https://a-b-frosty-tree-ac99.youihim1234.workers.dev/api/links';
+    let links = [];
 
     async function fetchLinks() {
-      try {
-        const res = await fetch(apiBase);
-        const json = await res.json();
-        const links = json.links || [];
-        localStorage.setItem("linkPool", JSON.stringify(links));
-        renderLinks(links);
-        showStatus("✅ 加载成功，共 " + links.length + " 个链接", "green");
-      } catch (err) {
-        showStatus("❌ 加载失败，请检查网络或 Worker 地址", "red");
-      }
-    }
-
-    function renderLinks(links) {
-      const list = document.getElementById("link-list");
-      list.innerHTML = "";
-      links.forEach((link, i) => {
-        const div = document.createElement("div");
-        div.className = "link-item";
-        div.innerHTML = `
-          <span>${link}</span>
-          <button onclick="removeLink(${i})">删除</button>
-        `;
-        list.appendChild(div);
-      });
+      const res = await fetch(API_BASE);
+      const data = await res.json();
+      links = data.links || [];
+      renderList();
     }
 
     function addLink() {
-      const input = document.getElementById("new-link");
-      const value = input.value.trim();
-      if (!value) return showStatus("请输入有效链接", "red");
-      const links = JSON.parse(localStorage.getItem("linkPool") || "[]");
-      links.push(value);
-      localStorage.setItem("linkPool", JSON.stringify(links));
-      input.value = "";
-      renderLinks(links);
-      showStatus("✅ 添加成功", "green");
+      const url = document.getElementById('urlInput').value.trim();
+      const weight = parseInt(document.getElementById('weightInput').value) || 1;
+      if (!url) return alert('请输入链接');
+      links.push({ url, weight });
+      renderList();
+      document.getElementById('urlInput').value = '';
+      document.getElementById('weightInput').value = '';
     }
 
     function removeLink(index) {
-      const links = JSON.parse(localStorage.getItem("linkPool") || "[]");
       links.splice(index, 1);
-      localStorage.setItem("linkPool", JSON.stringify(links));
-      renderLinks(links);
-      showStatus("✅ 删除成功", "green");
+      renderList();
     }
 
     async function saveLinks() {
-      const links = JSON.parse(localStorage.getItem("linkPool") || "[]");
-      if (links.length === 0) return showStatus("⚠️ 链接池为空，无法保存", "red");
-      try {
-        const res = await fetch(apiBase, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ links })
-        });
-        if (res.ok) {
-          showStatus("✅ 链接池已保存到 KV", "green");
-        } else {
-          showStatus("❌ 保存失败，请稍后再试", "red");
-        }
-      } catch (e) {
-        showStatus("❌ 网络异常，保存失败", "red");
-      }
+      const res = await fetch(API_BASE, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ links })
+      });
+      const data = await res.json();
+      alert(data.message || '保存成功');
     }
 
-    function showStatus(msg, color = "gray") {
-      const el = document.getElementById("status");
-      el.textContent = msg;
-      el.style.color = color;
+    function renderList() {
+      const listEl = document.getElementById('list');
+      listEl.innerHTML = '';
+      links.forEach((link, idx) => {
+        const div = document.createElement('div');
+        div.className = 'link-item';
+        div.innerHTML = `
+          <span>🔗 ${link.url}</span>
+          <span>（权重：${link.weight}）</span>
+          <button onclick="removeLink(${idx})">删除</button>
+        `;
+        listEl.appendChild(div);
+      });
     }
 
     fetchLinks();
