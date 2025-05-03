@@ -1,36 +1,75 @@
-
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>链接分流管理后台</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>点击统计</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-  <h1>欢迎使用链接分流管理后台</h1>
-  <form id="loginForm">
-    <label for="username">账号：</label>
-    <input type="text" id="username" required><br><br>
-    <label for="password">密码：</label>
-    <input type="password" id="password" required><br><br>
-    <button type="submit">登录</button>
-  </form>
-  <div id="app" style="display:none;">
-    <h2>已登录</h2>
-    <p>这里是链接管理界面（功能开发中）</p>
-  </div>
+  <h1>点击统计</h1>
+  <canvas id="trafficChart" width="400" height="200"></canvas>
+
   <script>
-    document.getElementById('loginForm').onsubmit = function(e) {
-      e.preventDefault();
-      const u = document.getElementById('username').value;
-      const p = document.getElementById('password').value;
-      if (u === 'admin' && p === 'admin123') {
-        document.getElementById('loginForm').style.display = 'none';
-        document.getElementById('app').style.display = 'block';
-      } else {
-        alert('账号或密码错误');
+    async function fetchData() {
+      try {
+        const response = await fetch('https://your-worker-url/api/links');
+        const data = await response.json();
+        
+        const links = data.links || [];
+        const labels = links.map((link, index) => `链接 ${index + 1}`);
+        const clickCounts = await Promise.all(
+          links.map(async (link, index) => {
+            const count = parseInt(await fetchClickCount(index)) || 0;
+            return count;
+          })
+        );
+
+        renderChart(labels, clickCounts);
+      } catch (error) {
+        console.error("Error fetching data:", error);
       }
     }
+
+    async function fetchClickCount(index) {
+      const response = await fetch(`https://your-worker-url/api/click-count/${index}`);
+      const data = await response.json();
+      return data.count || 0;
+    }
+
+    function renderChart(labels, clickCounts) {
+      const ctx = document.getElementById('trafficChart').getContext('2d');
+      new Chart(ctx, {
+        type: 'bar', // 或者 'pie' 用于饼图
+        data: {
+          labels: labels,
+          datasets: [{
+            label: '点击量',
+            data: clickCounts,
+            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+            borderColor: 'rgba(75, 192, 192, 1)',
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: {
+              position: 'top',
+            },
+            tooltip: {
+              callbacks: {
+                label: function (context) {
+                  return `${context.label}: ${context.raw} 次`;
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    fetchData();
   </script>
 </body>
 </html>
