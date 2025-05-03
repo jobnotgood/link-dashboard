@@ -2,136 +2,159 @@
 <html lang="zh">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>点击量统计</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.0.3/dist/tailwind.min.css" rel="stylesheet">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>链接池管理</title>
   <style>
+    * {
+      box-sizing: border-box;
+    }
+
     body {
-      font-family: Arial, sans-serif;
-      background-color: #f4f4f4;
-      padding: 20px;
+      font-family: "Segoe UI", sans-serif;
+      background: #f9fafb;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
     }
+
     .container {
-      max-width: 800px;
-      margin: 0 auto;
-      background-color: white;
-      padding: 20px;
-      border-radius: 8px;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      padding: 30px;
+      max-width: 600px;
+      width: 100%;
     }
-    h1 {
+
+    h2 {
       text-align: center;
-      font-size: 2rem;
-      margin-bottom: 30px;
-    }
-    .chart-container {
-      margin-top: 30px;
-    }
-    .button {
-      background-color: #4CAF50;
-      color: white;
-      padding: 10px 20px;
-      border: none;
-      border-radius: 4px;
-      font-size: 1rem;
       margin-bottom: 20px;
-      cursor: pointer;
+      color: #333;
     }
-    .button:hover {
-      background-color: #45a049;
+
+    .input-group {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 20px;
     }
-    .link-list {
-      margin-top: 30px;
+
+    input[type="text"] {
       padding: 10px;
-      background-color: #f9f9f9;
+      flex: 1;
+      border: 1px solid #ccc;
       border-radius: 8px;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     }
+
+    button {
+      padding: 10px 16px;
+      background-color: #3b82f6;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #2563eb;
+    }
+
     .link-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #f1f5f9;
+      border-radius: 8px;
+      padding: 10px;
       margin-bottom: 10px;
+    }
+
+    .link-item input {
+      flex: 1;
+      margin-right: 10px;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+
+    .link-item span {
+      margin-left: 10px;
+      color: #666;
+      font-size: 14px;
     }
   </style>
 </head>
 <body>
-
   <div class="container">
-    <h1>点击量统计</h1>
+    <h2>🔗 链接池管理（平均分流）</h2>
 
-    <div class="chart-container">
-      <canvas id="clickChart"></canvas>
+    <div class="input-group">
+      <input type="text" id="newUrl" placeholder="请输入新链接" />
+      <button onclick="addLink()">添加</button>
+      <button onclick="saveLinks()">保存</button>
     </div>
 
-    <button class="button" onclick="refreshStats()">刷新数据</button>
-
-    <div class="link-list">
-      <h2>链接池管理</h2>
-      <div id="linkList"></div>
-    </div>
+    <div id="linkList"></div>
   </div>
 
   <script>
-    // 获取点击量数据并更新图表
-    async function refreshStats() {
-      try {
-        const res = await fetch('/api/links');
-        const data = await res.json();
-        
-        const links = data.links || [];
-        const clickStats = links.map(link => link.clicks || 0);
+    const API = 'https://a-b-frosty-tree-ac99.youihim1234.workers.dev/api/links';
+    let links = [];
 
-        updateChart(links.map((_, index) => `链接 ${index + 1}`), clickStats);
-        updateLinkList(links);
-      } catch (error) {
-        console.error("获取统计数据失败", error);
-      }
+    async function fetchLinks() {
+      const res = await fetch(API);
+      const data = await res.json();
+      links = data.links || [];
+      renderList();
     }
 
-    // 更新图表
-    function updateChart(labels, data) {
-      const ctx = document.getElementById('clickChart').getContext('2d');
-      const chartData = {
-        labels: labels,
-        datasets: [{
-          label: '点击量',
-          data: data,
-          backgroundColor: 'rgba(75, 192, 192, 0.2)',
-          borderColor: 'rgba(75, 192, 192, 1)',
-          borderWidth: 1
-        }]
-      };
-
-      new Chart(ctx, {
-        type: 'bar',
-        data: chartData,
-        options: {
-          responsive: true,
-          scales: {
-            y: {
-              beginAtZero: true
-            }
-          }
-        }
-      });
-    }
-
-    // 更新链接池列表
-    function updateLinkList(links) {
-      const linkListDiv = document.getElementById('linkList');
-      linkListDiv.innerHTML = '';  // 清空现有链接列表
-
+    function renderList() {
+      const list = document.getElementById('linkList');
+      list.innerHTML = '';
       links.forEach((link, index) => {
-        const linkDiv = document.createElement('div');
-        linkDiv.classList.add('link-item');
-        linkDiv.innerHTML = `<strong>链接 ${index + 1}:</strong> <a href="${link.url}" target="_blank">${link.url}</a> | 点击量: ${link.clicks || 0}`;
-        linkListDiv.appendChild(linkDiv);
+        const div = document.createElement('div');
+        div.className = 'link-item';
+        div.innerHTML = `
+          <input value="${link.url}" onchange="updateLink(${index}, this.value)" />
+          <span>点击量：${link.clicks || 0}</span>
+          <button onclick="removeLink(${index})">删除</button>
+        `;
+        list.appendChild(div);
       });
     }
 
-    // 初次加载时获取数据并更新图表
-    refreshStats();
-  </script>
+    function addLink() {
+      const url = document.getElementById('newUrl').value.trim();
+      if (!url) return alert('请输入链接');
+      links.push({ url });
+      document.getElementById('newUrl').value = '';
+      renderList();
+    }
 
+    function removeLink(index) {
+      links.splice(index, 1);
+      renderList();
+    }
+
+    function updateLink(index, value) {
+      links[index].url = value;
+    }
+
+    async function saveLinks() {
+      const res = await fetch(API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ links })
+      });
+      const data = await res.json();
+      alert(data.message || '保存成功');
+    }
+
+    fetchLinks();
+  </script>
 </body>
 </html>
