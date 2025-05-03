@@ -2,73 +2,84 @@
 <html lang="zh">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>企业级链接池管理系统</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>链接池管理</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.0.3/dist/tailwind.min.css" rel="stylesheet">
   <style>
-    .container {
-      margin-top: 30px;
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f9f9f9;
     }
-    .card {
-      background: #fff;
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-      border-radius: 8px;
-      padding: 20px;
+    .container {
+      margin: 50px auto;
+      width: 80%;
+    }
+    h1 {
+      text-align: center;
+      font-size: 2rem;
+      margin-bottom: 30px;
+    }
+    .button {
+      background-color: #4CAF50;
+      color: white;
+      padding: 10px 15px;
+      border: none;
+      cursor: pointer;
+      border-radius: 4px;
+      font-size: 1rem;
+      width: 100%;
       margin-bottom: 20px;
     }
-    .card-header {
-      font-size: 18px;
-      font-weight: 600;
-      color: #333;
+    .button:hover {
+      background-color: #45a049;
     }
-    .card-content {
-      font-size: 14px;
+    .link-container {
+      margin-top: 20px;
     }
-    .chart-container {
-      position: relative;
-      height: 300px;
-      width: 100%;
+    .link-item {
+      background-color: #fff;
+      padding: 10px;
+      margin-bottom: 10px;
+      border-radius: 4px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      display: flex;
+      justify-content: space-between;
+    }
+    .link-item input {
+      border: 1px solid #ddd;
+      padding: 8px;
+      border-radius: 4px;
+      width: 80%;
+    }
+    .link-item button {
+      background-color: #f44336;
+      color: white;
+      padding: 5px 10px;
+      border: none;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    .link-item button:hover {
+      background-color: #e53935;
     }
   </style>
 </head>
-<body class="bg-gray-50 font-sans">
+<body>
 
-  <div class="container mx-auto px-4">
+  <div class="container">
+    <h1>链接池管理系统</h1>
+    <input id="newLink" type="text" placeholder="请输入新链接" class="border p-2 rounded w-full" />
+    <button class="button" onclick="addLink()">添加链接</button>
 
-    <!-- Top Nav -->
-    <div class="flex justify-between items-center py-4">
-      <div class="text-2xl font-semibold">企业级链接池管理</div>
-      <button class="bg-blue-500 text-white px-4 py-2 rounded">登出</button>
-    </div>
+    <div class="link-container" id="linkList"></div>
 
-    <!-- Main Content -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-      <!-- Link Pool Management -->
-      <div class="card col-span-1">
-        <div class="card-header">链接池管理</div>
-        <div class="card-content">
-          <input id="newLink" type="text" placeholder="输入新链接" class="border px-4 py-2 rounded mb-4 w-full" />
-          <button onclick="addLink()" class="bg-green-500 text-white px-4 py-2 rounded mb-4 w-full">添加链接</button>
-
-          <div id="linkList"></div>
-        </div>
-      </div>
-
-      <!-- Click Statistics Chart -->
-      <div class="card col-span-1">
-        <div class="card-header">点击量统计</div>
-        <div class="card-content">
-          <div class="chart-container">
-            <canvas id="clickChart"></canvas>
-          </div>
-        </div>
-      </div>
-
-    </div>
+    <h2>点击量统计</h2>
+    <canvas id="clickChart"></canvas>
   </div>
 
   <script>
@@ -89,23 +100,22 @@
       }
     }
 
-    // Render link pool
+    // Render links to the page
     function renderLinks() {
       const list = document.getElementById('linkList');
       list.innerHTML = '';
       links.forEach((link, index) => {
         const div = document.createElement('div');
+        div.className = 'link-item';
         div.innerHTML = `
-          <div class="flex justify-between items-center mb-4">
-            <input value="${link}" class="border px-4 py-2 rounded w-3/4" onchange="updateLink(${index}, this.value)" />
-            <button onclick="removeLink(${index})" class="bg-red-500 text-white px-2 py-1 rounded">删除</button>
-          </div>
+          <input value="${link}" onchange="updateLink(${index}, this.value)" />
+          <button onclick="removeLink(${index})">删除</button>
         `;
         list.appendChild(div);
       });
     }
 
-    // Update link
+    // Update link in the list
     function updateLink(index, value) {
       links[index] = value;
     }
@@ -142,7 +152,7 @@
       }
     }
 
-    // Update Chart.js with click statistics
+    // Update the chart with click statistics
     function updateChart() {
       const ctx = document.getElementById('clickChart').getContext('2d');
       const chartData = {
@@ -169,7 +179,7 @@
       });
     }
 
-    // Initialize
+    // Initialize the page by fetching links and stats
     fetchLinks();
   </script>
 
