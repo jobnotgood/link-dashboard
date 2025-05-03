@@ -2,159 +2,93 @@
 <html lang="zh">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>企业级链接池管理系统</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>点击量统计</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.0.3/dist/tailwind.min.css" rel="stylesheet">
   <style>
-    .container {
-      margin-top: 30px;
-    }
-    .card {
-      background: #fff;
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-      border-radius: 8px;
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
       padding: 20px;
-      margin-bottom: 20px;
     }
-    .card-header {
-      font-size: 18px;
-      font-weight: 600;
-      color: #333;
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background-color: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     }
-    .card-content {
-      font-size: 14px;
+    h1 {
+      text-align: center;
+      font-size: 2rem;
+      margin-bottom: 30px;
     }
     .chart-container {
-      position: relative;
-      height: 300px;
-      width: 100%;
+      margin-top: 30px;
+    }
+    .button {
+      background-color: #4CAF50;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      font-size: 1rem;
+      margin-bottom: 20px;
+      cursor: pointer;
+    }
+    .button:hover {
+      background-color: #45a049;
     }
   </style>
 </head>
-<body class="bg-gray-50 font-sans">
+<body>
 
-  <div class="container mx-auto px-4">
+  <div class="container">
+    <h1>点击量统计</h1>
 
-    <!-- Top Nav -->
-    <div class="flex justify-between items-center py-4">
-      <div class="text-2xl font-semibold">企业级链接池管理</div>
-      <button class="bg-blue-500 text-white px-4 py-2 rounded">登出</button>
+    <div class="chart-container">
+      <canvas id="clickChart"></canvas>
     </div>
 
-    <!-- Main Content -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-      <!-- Link Pool Management -->
-      <div class="card col-span-1">
-        <div class="card-header">链接池管理</div>
-        <div class="card-content">
-          <input id="newLink" type="text" placeholder="输入新链接" class="border px-4 py-2 rounded mb-4 w-full" />
-          <button onclick="addLink()" class="bg-green-500 text-white px-4 py-2 rounded mb-4 w-full">添加链接</button>
-
-          <div id="linkList"></div>
-        </div>
-      </div>
-
-      <!-- Click Statistics Chart -->
-      <div class="card col-span-1">
-        <div class="card-header">点击量统计</div>
-        <div class="card-content">
-          <div class="chart-container">
-            <canvas id="clickChart"></canvas>
-          </div>
-        </div>
-      </div>
-
-    </div>
+    <button class="button" onclick="refreshStats()">刷新数据</button>
   </div>
 
   <script>
-    let links = [];
-    let clickData = {};
-
-    // Fetch current links and statistics
-    async function fetchLinks() {
+    // 获取点击量数据并更新图表
+    async function refreshStats() {
       try {
         const res = await fetch('/api/links');
         const data = await res.json();
-        links = data.links || [];
-        clickData = data.clickStats || {};
-        renderLinks();
-        updateChart();
+        
+        const links = data.links || [];
+        const clickStats = data.clickStats || {};
+        
+        const labels = links.map((_, index) => `链接 ${index + 1}`);
+        const clickData = links.map((_, index) => clickStats[`clickCount-${index}`] || 0);
+        
+        updateChart(labels, clickData);
       } catch (error) {
-        console.error("获取链接数据失败", error);
+        console.error("获取统计数据失败", error);
       }
     }
 
-    // Render link pool
-    function renderLinks() {
-      const list = document.getElementById('linkList');
-      list.innerHTML = '';
-      links.forEach((link, index) => {
-        const div = document.createElement('div');
-        div.innerHTML = `
-          <div class="flex justify-between items-center mb-4">
-            <input value="${link}" class="border px-4 py-2 rounded w-3/4" onchange="updateLink(${index}, this.value)" />
-            <button onclick="removeLink(${index})" class="bg-red-500 text-white px-2 py-1 rounded">删除</button>
-          </div>
-        `;
-        list.appendChild(div);
-      });
-    }
-
-    // Update link
-    function updateLink(index, value) {
-      links[index] = value;
-    }
-
-    // Add new link
-    function addLink() {
-      const newLink = document.getElementById('newLink').value.trim();
-      if (newLink) {
-        links.push(newLink);
-        document.getElementById('newLink').value = '';
-        saveLinks();
-      }
-    }
-
-    // Remove link
-    function removeLink(index) {
-      links.splice(index, 1);
-      saveLinks();
-    }
-
-    // Save links to backend
-    async function saveLinks() {
-      try {
-        const res = await fetch('/api/links', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ links })
-        });
-        const result = await res.json();
-        alert(result.message || '保存成功');
-        fetchLinks();
-      } catch (error) {
-        alert('保存失败');
-      }
-    }
-
-    // Update Chart.js with click statistics
-    function updateChart() {
+    // 更新图表
+    function updateChart(labels, data) {
       const ctx = document.getElementById('clickChart').getContext('2d');
       const chartData = {
-        labels: links.map((_, i) => `链接 ${i + 1}`),
+        labels: labels,
         datasets: [{
           label: '点击量',
-          data: links.map((_, i) => clickData[`clickCount-${i}`] || 0),
+          data: data,
           backgroundColor: 'rgba(75, 192, 192, 0.2)',
           borderColor: 'rgba(75, 192, 192, 1)',
           borderWidth: 1
         }]
       };
+
       new Chart(ctx, {
         type: 'bar',
         data: chartData,
@@ -169,8 +103,8 @@
       });
     }
 
-    // Initialize
-    fetchLinks();
+    // 初次加载时获取数据并更新图表
+    refreshStats();
   </script>
 
 </body>
