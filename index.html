@@ -1,187 +1,69 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh-CN">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>链接池管理</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.0.3/dist/tailwind.min.css" rel="stylesheet">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>链接统计</title>
   <style>
     body {
       font-family: Arial, sans-serif;
       margin: 0;
       padding: 0;
-      background-color: #f9f9f9;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background-color: #f0f0f0;
     }
     .container {
-      margin: 50px auto;
-      width: 80%;
-    }
-    h1 {
       text-align: center;
-      font-size: 2rem;
-      margin-bottom: 30px;
-    }
-    .button {
-      background-color: #4CAF50;
-      color: white;
-      padding: 10px 15px;
-      border: none;
-      cursor: pointer;
-      border-radius: 4px;
-      font-size: 1rem;
-      width: 100%;
-      margin-bottom: 20px;
-    }
-    .button:hover {
-      background-color: #45a049;
-    }
-    .link-container {
-      margin-top: 20px;
     }
     .link-item {
       background-color: #fff;
       padding: 10px;
-      margin-bottom: 10px;
-      border-radius: 4px;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-      display: flex;
-      justify-content: space-between;
+      margin: 10px 0;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     }
     .link-item input {
-      border: 1px solid #ddd;
-      padding: 8px;
-      border-radius: 4px;
       width: 80%;
+      padding: 5px;
     }
-    .link-item button {
-      background-color: #f44336;
-      color: white;
-      padding: 5px 10px;
-      border: none;
-      cursor: pointer;
-      border-radius: 4px;
-    }
-    .link-item button:hover {
-      background-color: #e53935;
+    .link-item span {
+      margin-left: 10px;
+      font-weight: bold;
     }
   </style>
 </head>
 <body>
-
   <div class="container">
-    <h1>链接池管理系统</h1>
-    <input id="newLink" type="text" placeholder="请输入新链接" class="border p-2 rounded w-full" />
-    <button class="button" onclick="addLink()">添加链接</button>
-
-    <div class="link-container" id="linkList"></div>
-
-    <h2>点击量统计</h2>
-    <canvas id="clickChart"></canvas>
-  </div>
-
-  <script>
-    let links = [];
-    let clickData = {};
-
-    // Fetch current links and statistics
-    async function fetchLinks() {
-      try {
+    <h1>链接点击统计</h1>
+    <div id="linkList"></div>
+    <script>
+      async function fetchLinks() {
         const res = await fetch('/api/links');
         const data = await res.json();
-        links = data.links || [];
-        clickData = data.clickStats || {};
-        renderLinks();
-        updateChart();
-      } catch (error) {
-        console.error("获取链接数据失败", error);
+        const links = data.links || [];
+        renderList(links);
       }
-    }
 
-    // Render links to the page
-    function renderLinks() {
-      const list = document.getElementById('linkList');
-      list.innerHTML = '';
-      links.forEach((link, index) => {
-        const div = document.createElement('div');
-        div.className = 'link-item';
-        div.innerHTML = `
-          <input value="${link}" onchange="updateLink(${index}, this.value)" />
-          <button onclick="removeLink(${index})">删除</button>
-        `;
-        list.appendChild(div);
-      });
-    }
-
-    // Update link in the list
-    function updateLink(index, value) {
-      links[index] = value;
-    }
-
-    // Add new link
-    function addLink() {
-      const newLink = document.getElementById('newLink').value.trim();
-      if (newLink) {
-        links.push(newLink);
-        document.getElementById('newLink').value = '';
-        saveLinks();
-      }
-    }
-
-    // Remove link
-    function removeLink(index) {
-      links.splice(index, 1);
-      saveLinks();
-    }
-
-    // Save links to backend
-    async function saveLinks() {
-      try {
-        const res = await fetch('/api/links', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ links })
+      function renderList(links) {
+        const list = document.getElementById('linkList');
+        list.innerHTML = '';
+        links.forEach((link, index) => {
+          const div = document.createElement('div');
+          div.className = 'link-item';
+          div.innerHTML = `
+            <input value="${link.url}" onchange="updateLink(${index}, this.value)" />
+            <span>点击量: ${link.clickCount || 0}</span>
+            <button onclick="removeLink(${index})">删除</button>
+          `;
+          list.appendChild(div);
         });
-        const result = await res.json();
-        alert(result.message || '保存成功');
-        fetchLinks();
-      } catch (error) {
-        alert('保存失败');
       }
-    }
 
-    // Update the chart with click statistics
-    function updateChart() {
-      const ctx = document.getElementById('clickChart').getContext('2d');
-      const chartData = {
-        labels: links.map((_, i) => `链接 ${i + 1}`),
-        datasets: [{
-          label: '点击量',
-          data: links.map((_, i) => clickData[`clickCount-${i}`] || 0),
-          backgroundColor: 'rgba(75, 192, 192, 0.2)',
-          borderColor: 'rgba(75, 192, 192, 1)',
-          borderWidth: 1
-        }]
-      };
-      new Chart(ctx, {
-        type: 'bar',
-        data: chartData,
-        options: {
-          responsive: true,
-          scales: {
-            y: {
-              beginAtZero: true
-            }
-          }
-        }
-      });
-    }
-
-    // Initialize the page by fetching links and stats
-    fetchLinks();
-  </script>
-
+      fetchLinks();
+    </script>
+  </div>
 </body>
 </html>
