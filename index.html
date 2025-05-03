@@ -5,39 +5,101 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>链接池管理</title>
   <style>
+    * {
+      box-sizing: border-box;
+    }
+
     body {
-      font-family: sans-serif;
-      background: #f4f4f4;
-      padding: 20px;
+      font-family: "Segoe UI", sans-serif;
+      background: #f9fafb;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
     }
-    input {
-      padding: 6px;
-      margin-right: 8px;
-      width: 300px;
+
+    .container {
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      padding: 30px;
+      max-width: 600px;
+      width: 100%;
     }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #333;
+    }
+
+    .input-group {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    input[type="text"] {
+      padding: 10px;
+      flex: 1;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+    }
+
     button {
-      padding: 6px 12px;
-      margin-right: 6px;
+      padding: 10px 16px;
+      background-color: #3b82f6;
+      color: white;
+      border: none;
+      border-radius: 8px;
       cursor: pointer;
+      transition: background 0.3s ease;
     }
+
+    button:hover {
+      background-color: #2563eb;
+    }
+
     .link-item {
-      margin-top: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #f1f5f9;
+      border-radius: 8px;
+      padding: 10px;
+      margin-bottom: 10px;
     }
+
     .link-item input {
-      width: 300px;
+      flex: 1;
+      margin-right: 10px;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+
+    .link-item span {
+      margin-left: 10px;
+      color: #666;
+      font-size: 14px;
     }
   </style>
 </head>
 <body>
-  <h2>🔗 链接池管理（自动平均分流）</h2>
+  <div class="container">
+    <h2>🔗 链接池管理（平均分流）</h2>
 
-  <div style="margin-bottom: 20px;">
-    <input id="newUrl" placeholder="请输入新链接" />
-    <button onclick="addLink()">添加</button>
-    <button onclick="saveLinks()">保存</button>
+    <div class="input-group">
+      <input type="text" id="newUrl" placeholder="请输入新链接" />
+      <button onclick="addLink()">添加</button>
+      <button onclick="saveLinks()">保存</button>
+    </div>
+
+    <div id="linkList"></div>
   </div>
-
-  <div id="linkList"></div>
 
   <script>
     const API = 'https://a-b-frosty-tree-ac99.youihim1234.workers.dev/api/links';
@@ -57,7 +119,8 @@
         const div = document.createElement('div');
         div.className = 'link-item';
         div.innerHTML = `
-          <input value="${link}" onchange="updateLink(${index}, this.value)" />
+          <input value="${link.url}" onchange="updateLink(${index}, this.value)" />
+          <span>点击量：${link.clicks || 0}</span>
           <button onclick="removeLink(${index})">删除</button>
         `;
         list.appendChild(div);
@@ -67,7 +130,7 @@
     function addLink() {
       const url = document.getElementById('newUrl').value.trim();
       if (!url) return alert('请输入链接');
-      links.push(url);
+      links.push({ url });
       document.getElementById('newUrl').value = '';
       renderList();
     }
@@ -78,15 +141,14 @@
     }
 
     function updateLink(index, value) {
-      links[index] = value;
+      links[index].url = value;
     }
 
     async function saveLinks() {
-      const formatted = links.map(url => ({ url }));
       const res = await fetch(API, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ links: formatted })
+        body: JSON.stringify({ links })
       });
       const data = await res.json();
       alert(data.message || '保存成功');
