@@ -35,6 +35,7 @@
       display: flex;
       gap: 12px;
       margin-bottom: 30px;
+      justify-content: space-between;
     }
     input[type="text"] {
       flex: 1;
@@ -68,6 +69,7 @@
       align-items: center;
       gap: 12px;
       margin-bottom: 16px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     }
     .link-item input, .link-item textarea {
       flex: 1;
@@ -105,6 +107,16 @@
     .loading.show { display: block; }
     .error { color: #e74c3c; display: none; }
     .error.show { display: block; }
+    /* Add responsiveness */
+    @media (max-width: 600px) {
+      .input-group {
+        flex-direction: column;
+      }
+      button {
+        width: 100%;
+        margin-top: 12px;
+      }
+    }
   </style>
 </head>
 <body>
