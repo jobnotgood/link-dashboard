@@ -54,6 +54,11 @@
     .link-item span {
       margin-left: 10px; color: #666; font-size: 14px;
     }
+    .link-item textarea {
+      flex: 1; margin-left: 10px;
+      padding: 8px; border: 1px solid #ccc; border-radius: 6px;
+      font-size: 12px;
+    }
     .loading { display: none; text-align: center; color: #3b82f6; }
     .loading.show { display: block; }
     .error {
@@ -119,10 +124,11 @@
         const div = document.createElement('div');
         div.className = 'link-item';
         div.innerHTML = `
-          <input value="${link.url}" onchange="updateLink(${index}, this.value)" />
+          <input value="${link.url}" onchange="updateLink(${index}, 'url', this.value)" />
           <span>点击量：${link.clicks || 0}</span>
           <button onclick="removeLink(${index})">删除</button>
           <a href="${link.url}" target="_blank" class="open-link">打开链接</a>
+          <textarea placeholder="请输入备注" onchange="updateLink(${index}, 'remark', this.value)">${link.remark || ''}</textarea>
         `;
         list.appendChild(div);
       });
@@ -145,8 +151,8 @@
       }
     }
 
-    function updateLink(index, value) {
-      links[index].url = value;
+    function updateLink(index, field, value) {
+      links[index][field] = value;
     }
 
     async function saveLinks() {
