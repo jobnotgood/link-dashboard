@@ -13,67 +13,98 @@
       min-height: 100vh; padding: 20px;
     }
     .container {
-      background-color: #ffffff;
-      border-radius: 10px;
-      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
-      width: 100%; max-width: 800px;
+      background-color: #fff;
+      border-radius: 12px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+      width: 100%; max-width: 880px;
       padding: 40px 30px;
-      overflow: hidden;
     }
     h2 {
-      font-size: 1.8rem; text-align: center; color: #333; margin-bottom: 25px;
+      font-size: 1.8rem;
+      text-align: center;
+      margin-bottom: 20px;
+      color: #222;
     }
     .current-target {
-      text-align: center; font-size: 1.1rem; color: #666; margin-bottom: 20px;
+      text-align: center;
+      color: #666;
+      margin-bottom: 25px;
+      font-size: 1.05rem;
     }
     .input-group {
-      display: flex; justify-content: space-between; gap: 15px; margin-bottom: 25px;
+      display: flex;
+      gap: 12px;
+      margin-bottom: 30px;
     }
     input[type="text"] {
-      padding: 12px 20px; border-radius: 8px; border: 1px solid #ddd;
-      flex-grow: 1; font-size: 1rem; color: #555; transition: border 0.3s;
+      flex: 1;
+      padding: 12px 16px;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      transition: 0.3s;
     }
     input[type="text"]:focus {
-      border-color: #007bff; outline: none;
+      border-color: #007bff;
+      outline: none;
     }
     button {
-      padding: 12px 20px; background-color: #007bff; color: white; 
-      border-radius: 8px; border: none; font-size: 1rem; cursor: pointer; 
+      background-color: #007bff;
+      color: white;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
       transition: background-color 0.3s ease;
     }
     button:hover { background-color: #0056b3; }
     .link-item {
-      background-color: #f8f9fa; border-radius: 10px; margin-bottom: 18px; padding: 15px;
-      display: flex; justify-content: space-between; align-items: center;
-      transition: background-color 0.3s;
+      background-color: #f9f9f9;
+      border-radius: 10px;
+      padding: 15px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
     }
-    .link-item:hover { background-color: #e9ecef; }
-    .link-item input {
-      padding: 10px; border: 1px solid #ddd; border-radius: 8px; flex-grow: 1;
+    .link-item input, .link-item textarea {
+      flex: 1;
+      padding: 10px;
+      font-size: 0.95rem;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+    .link-item span {
+      font-size: 0.95rem;
+      color: #555;
+      white-space: nowrap;
     }
     .link-item button {
-      background-color: #dc3545; color: white; padding: 8px 16px; 
-      border-radius: 8px; font-size: 1rem; cursor: pointer;
+      background-color: #dc3545;
     }
-    .link-item button:hover { background-color: #c82333; }
+    .link-item button:hover {
+      background-color: #c82333;
+    }
     .open-link {
-      padding: 6px 12px; background-color: #28a745; color: white; 
-      border-radius: 6px; text-decoration: none; font-size: 0.9rem;
+      text-decoration: none;
+      background-color: #28a745;
+      color: white;
+      padding: 8px 14px;
+      font-size: 0.9rem;
+      border-radius: 6px;
     }
     .open-link:hover { background-color: #218838; }
-    .loading {
-      display: none; text-align: center; color: #007bff; font-size: 1rem;
+    .loading, .error {
+      text-align: center;
+      margin-top: 15px;
+      font-size: 0.95rem;
     }
+    .loading { color: #007bff; display: none; }
     .loading.show { display: block; }
-    .error {
-      color: #e74c3c; text-align: center; font-size: 0.9rem;
-      margin-top: 10px; display: none;
-    }
+    .error { color: #e74c3c; display: none; }
     .error.show { display: block; }
-    .link-item textarea {
-      flex: 1; padding: 10px; font-size: 0.95rem; border: 1px solid #ddd;
-      border-radius: 8px; margin-left: 10px;
-    }
   </style>
 </head>
 <body>
@@ -82,7 +113,7 @@
     <div class="current-target" id="currentTarget">🎯 正在识别当前跳转链接…</div>
 
     <div class="input-group">
-      <input type="text" id="newUrl" placeholder="请输入新链接" />
+      <input type="text" id="newUrl" placeholder="请输入新链接（如：https://example.com）" />
       <button onclick="addLink()">添加</button>
       <button onclick="saveLinks()">保存</button>
     </div>
@@ -106,6 +137,17 @@
       document.getElementById('loading').classList.remove('show');
     }
 
+    async function fetchCurrentTarget() {
+      try {
+        const res = await fetch(API_TARGET);
+        const data = await res.json();
+        const label = data.target.url || '未知链接';
+        document.getElementById('currentTarget').textContent = `🎯 当前访问者将跳转到第 ${data.index + 1} 个链接：${label}`;
+      } catch {
+        document.getElementById('currentTarget').textContent = '⚠️ 无法获取当前跳转链接';
+      }
+    }
+
     function renderList() {
       const list = document.getElementById('linkList');
       list.innerHTML = '';
@@ -113,21 +155,25 @@
         const div = document.createElement('div');
         div.className = 'link-item';
         div.innerHTML = `
-          <input value="${link.url}" onchange="updateLink(${index}, 'url', this.value)" />
+          <input type="text" value="${link.url}" onchange="updateLink(${index}, 'url', this.value)" />
           <span>点击量：${link.clicks || 0}</span>
+          <textarea placeholder="备注" onchange="updateLink(${index}, 'remark', this.value)">${link.remark || ''}</textarea>
+          <a href="${link.url}" target="_blank" class="open-link">预览</a>
           <button onclick="removeLink(${index})">删除</button>
-          <a href="${link.url}" target="_blank" class="open-link">打开链接</a>
-          <textarea placeholder="请输入备注" onchange="updateLink(${index}, 'remark', this.value)">${link.remark || ''}</textarea>
         `;
         list.appendChild(div);
       });
+    }
+
+    function updateLink(index, field, value) {
+      links[index][field] = value;
     }
 
     function addLink() {
       const url = document.getElementById('newUrl').value.trim();
       if (!url) return showError('请输入链接');
       const urlRegex = /^https?:\/\/([\w-]+\.)+[\w-]+(\/[\w\-./?%&=]*)?$/;
-      if (!urlRegex.test(url)) return showError('请输入有效的URL链接');
+      if (!urlRegex.test(url)) return showError('请输入有效的URL');
       links.push({ url });
       document.getElementById('newUrl').value = '';
       renderList();
@@ -140,10 +186,6 @@
       }
     }
 
-    function updateLink(index, field, value) {
-      links[index][field] = value;
-    }
-
     async function saveLinks() {
       document.getElementById('loading').classList.add('show');
       const res = await fetch(API, {
@@ -154,7 +196,7 @@
       const data = await res.json();
       alert(data.message || '保存成功');
       document.getElementById('loading').classList.remove('show');
-      await fetchLinks(); // 保存后刷新列表
+      await fetchLinks();
     }
 
     function showError(message) {
@@ -162,19 +204,6 @@
       error.textContent = message;
       error.classList.add('show');
       setTimeout(() => error.classList.remove('show'), 3000);
-    }
-
-    async function fetchCurrentTarget() {
-      try {
-        const res = await fetch(API_TARGET);
-        if (!res.ok) return;
-        const data = await res.json();
-        const current = document.getElementById('currentTarget');
-        const label = data.target.url || '未知链接';
-        current.textContent = `🎯 当前访问者将跳转到第 ${data.index + 1} 个链接：${label}`;
-      } catch (e) {
-        document.getElementById('currentTarget').textContent = '⚠️ 无法获取当前跳转链接';
-      }
     }
 
     document.getElementById('newUrl').addEventListener('keydown', (e) => {
