@@ -117,6 +117,33 @@
         margin-top: 12px;
       }
     }
+    /* Dialog box styles */
+    .dialog {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      width: 80%;
+      max-width: 500px;
+      display: none;
+    }
+    .dialog.show {
+      display: block;
+    }
+    .dialog button {
+      background-color: #007bff;
+      color: white;
+      padding: 8px 12px;
+      border: none;
+      border-radius: 6px;
+    }
+    .dialog button:hover {
+      background-color: #0056b3;
+    }
   </style>
 </head>
 <body>
@@ -133,6 +160,15 @@
     <div id="linkList"></div>
     <div class="loading" id="loading">加载中...</div>
     <div class="error" id="error"></div>
+  </div>
+
+  <!-- Dialog for viewing link details -->
+  <div class="dialog" id="linkDialog">
+    <h3>链接详情</h3>
+    <div id="dialogUrl"></div>
+    <div id="dialogClicks"></div>
+    <div id="dialogRemark"></div>
+    <button onclick="closeDialog()">关闭</button>
   </div>
 
   <script>
@@ -170,7 +206,7 @@
           <input type="text" value="${link.url}" onchange="updateLink(${index}, 'url', this.value)" />
           <span>点击量：${link.clicks || 0}</span>
           <textarea placeholder="备注" onchange="updateLink(${index}, 'remark', this.value)">${link.remark || ''}</textarea>
-          <a href="${link.url}" target="_blank" class="open-link">预览</a>
+          <a href="#" class="open-link" onclick="openLinkDialog(${index})">查看详情</a>
           <button onclick="removeLink(${index})">删除</button>
         `;
         list.appendChild(div);
@@ -209,6 +245,18 @@
       alert(data.message || '保存成功');
       document.getElementById('loading').classList.remove('show');
       await fetchLinks();
+    }
+
+    function openLinkDialog(index) {
+      const link = links[index];
+      document.getElementById('dialogUrl').textContent = `链接: ${link.url}`;
+      document.getElementById('dialogClicks').textContent = `点击量: ${link.clicks || 0}`;
+      document.getElementById('dialogRemark').textContent = `备注: ${link.remark || '无'}`;
+      document.getElementById('linkDialog').classList.add('show');
+    }
+
+    function closeDialog() {
+      document.getElementById('linkDialog').classList.remove('show');
     }
 
     function showError(message) {
