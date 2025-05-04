@@ -29,7 +29,7 @@
       margin-bottom: 20px;
     }
     .input-group {
-      display: flex; gap: 10px; margin-bottom: 20px;
+      display: flex; gap: 20px; margin-bottom: 20px;
     }
     input[type="text"] {
       padding: 10px; flex: 1;
@@ -175,7 +175,7 @@
         if (!res.ok) return;
         const data = await res.json();
         const current = document.getElementById('currentTarget');
-        const label = data.target.name || data.target.url || '未知链接';
+        const label = data.target.url || '未知链接';
         current.textContent = `🎯 当前访问者将跳转到第 ${data.index + 1} 个链接：${label}`;
       } catch (e) {
         document.getElementById('currentTarget').textContent = '⚠️ 无法获取当前跳转链接';
