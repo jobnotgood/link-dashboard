@@ -63,6 +63,23 @@
       display: none;
     }
     .error.show { display: block; }
+    .link-item button {
+      background-color: #ef4444;
+      margin-left: 10px;
+    }
+    .link-item button:hover {
+      background-color: #dc2626;
+    }
+    .open-link {
+      background-color: #10b981;
+      color: white;
+      padding: 5px 10px;
+      border-radius: 6px;
+      text-decoration: none;
+    }
+    .open-link:hover {
+      background-color: #059669;
+    }
   </style>
 </head>
 <body>
@@ -105,6 +122,7 @@
           <input value="${link.url}" onchange="updateLink(${index}, this.value)" />
           <span>点击量：${link.clicks || 0}</span>
           <button onclick="removeLink(${index})">删除</button>
+          <a href="${link.url}" target="_blank" class="open-link">打开链接</a>
         `;
         list.appendChild(div);
       });
