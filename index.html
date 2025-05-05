@@ -69,9 +69,11 @@
   </table>
 
   <script>
+    const BASE_URL = "https://a-b-frosty-tree-ac99.youihim1234.workers.dev";
+
     async function fetchLinks() {
       try {
-        const res = await fetch('/api/links');
+        const res = await fetch(`${BASE_URL}/api/links`);
         const data = await res.json();
         if (!Array.isArray(data.links)) throw new Error("数据格式错误");
         renderTable(data.links);
@@ -129,7 +131,7 @@
       });
 
       try {
-        const res = await fetch('/api/links', {
+        const res = await fetch(`${BASE_URL}/api/links`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ links })
