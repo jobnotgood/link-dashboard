@@ -3,86 +3,99 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>链接池统计</title>
+  <title>链接池管理</title>
   <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      margin: 2rem;
-      background: #f6f8fa;
-      color: #333;
-    }
-    h1 {
-      font-size: 1.8rem;
-      margin-bottom: 1rem;
-    }
-    table {
-      border-collapse: collapse;
-      width: 100%;
-      background: #fff;
-    }
-    th, td {
-      padding: 0.75rem;
-      border: 1px solid #ddd;
-      text-align: left;
-    }
-    th {
-      background-color: #f0f0f0;
-    }
-    a {
-      color: #007bff;
-      text-decoration: none;
-    }
-    a:hover {
-      text-decoration: underline;
-    }
-    .error {
-      color: red;
-      margin-bottom: 1rem;
-    }
+    body { font-family: sans-serif; max-width: 800px; margin: 20px auto; }
+    table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    th { background-color: #f0f0f0; }
+    input[type="text"] { width: 100%; padding: 4px; }
+    button { padding: 6px 12px; margin-right: 8px; }
+    .actions { display: flex; gap: 8px; }
   </style>
 </head>
 <body>
-  <h1>📈 当前链接池</h1>
-  <div class="error" id="error"></div>
-  <table id="linkTable">
+  <h1>链接池管理后台</h1>
+
+  <table>
     <thead>
       <tr>
         <th>#</th>
-        <th>备注</th>
-        <th>链接</th>
-        <th>点击次数</th>
+        <th>名称 (remark)</th>
+        <th>链接 URL</th>
+        <th>点击数</th>
+        <th>操作</th>
       </tr>
     </thead>
-    <tbody></tbody>
+    <tbody id="link-table-body"></tbody>
   </table>
 
+  <h2>新增链接</h2>
+  <div>
+    <input type="text" id="new-remark" placeholder="名称 remark"/>
+    <input type="text" id="new-url" placeholder="链接 URL (必须以 http 开头)"/>
+    <button onclick="addLink()">添加</button>
+  </div>
+
   <script>
-    async function loadLinks() {
-      try {
-        const res = await fetch("/api/links");
-        if (!res.ok) throw new Error("接口响应失败");
+    let links = [];
 
-        const data = await res.json();
-        if (!Array.isArray(data.links)) throw new Error("数据结构异常");
-
-        const table = document.querySelector("#linkTable tbody");
-        table.innerHTML = "";
-        data.links.forEach((link, i) => {
-          const row = document.createElement("tr");
-          row.innerHTML = `
-            <td>${i + 1}</td>
-            <td>${link.remark || '-'}</td>
-            <td><a href="${link.url}" target="_blank">${link.url}</a></td>
-            <td>${link.clicks || 0}</td>
-          `;
-          table.appendChild(row);
-        });
-      } catch (err) {
-        document.getElementById("error").textContent = "❌ 加载失败：" + err.message;
-      }
+    async function fetchLinks() {
+      const res = await fetch('/api/links');
+      const data = await res.json();
+      links = data.links || [];
+      renderTable();
     }
 
-    loadLinks();
+    function renderTable() {
+      const tbody = document.getElementById('link-table-body');
+      tbody.innerHTML = '';
+      links.forEach((link, index) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${index}</td>
+          <td><input type="text" value="${link.remark || ''}" onchange="updateField(${index}, 'remark', this.value)" /></td>
+          <td><input type="text" value="${link.url}" onchange="updateField(${index}, 'url', this.value)" /></td>
+          <td>${link.clicks || 0}</td>
+          <td class="actions">
+            <button onclick="removeLink(${index})">删除</button>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    function updateField(index, field, value) {
+      links[index][field] = value;
+    }
+
+    async function removeLink(index) {
+      links.splice(index, 1);
+      await saveLinks();
+    }
+
+    async function addLink() {
+      const remark = document.getElementById('new-remark').value.trim();
+      const url = document.getElementById('new-url').value.trim();
+      if (!url.startsWith('http')) return alert('URL 必须以 http/https 开头');
+      links.push({ url, remark });
+      document.getElementById('new-remark').value = '';
+      document.getElementById('new-url').value = '';
+      await saveLinks();
+    }
+
+    async function saveLinks() {
+      const payload = { links: links.map(l => ({ url: l.url, remark: l.remark || '' })) };
+      const res = await fetch('/api/links', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) return alert('保存失败');
+      await fetchLinks();
+    }
+
+    fetchLinks();
   </script>
 </body>
 </html>
