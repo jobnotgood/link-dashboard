@@ -3,39 +3,38 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>链接池管理</title>
+  <title>链接池管理后台</title>
   <style>
-    body { font-family: sans-serif; max-width: 800px; margin: 20px auto; }
-    table { width: 100%; border-collapse: collapse; margin-top: 16px; }
-    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-    th { background-color: #f0f0f0; }
-    input[type="text"] { width: 100%; padding: 4px; }
-    button { padding: 6px 12px; margin-right: 8px; }
-    .actions { display: flex; gap: 8px; }
+    body { font-family: sans-serif; padding: 2rem; background: #f9f9f9; }
+    table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+    th, td { border: 1px solid #ddd; padding: 0.5rem; text-align: left; }
+    th { background-color: #eee; }
+    input { width: 100%; padding: 0.3rem; }
+    button { padding: 0.4rem 1rem; margin-right: 0.5rem; }
+    .actions { white-space: nowrap; }
   </style>
 </head>
 <body>
-  <h1>链接池管理后台</h1>
+  <h1>🔗 链接池管理</h1>
 
-  <table>
+  <table id="linkTable">
     <thead>
       <tr>
         <th>#</th>
-        <th>名称 (remark)</th>
-        <th>链接 URL</th>
+        <th>名称</th>
+        <th>链接地址</th>
         <th>点击数</th>
-        <th>操作</th>
+        <th class="actions">操作</th>
       </tr>
     </thead>
-    <tbody id="link-table-body"></tbody>
+    <tbody></tbody>
   </table>
 
-  <h2>新增链接</h2>
-  <div>
-    <input type="text" id="new-remark" placeholder="名称 remark"/>
-    <input type="text" id="new-url" placeholder="链接 URL (必须以 http 开头)"/>
-    <button onclick="addLink()">添加</button>
-  </div>
+  <h2>➕ 添加新链接</h2>
+  <input type="text" id="newName" placeholder="链接名称" />
+  <input type="url" id="newUrl" placeholder="https://example.com" />
+  <button onclick="addLink()">添加</button>
+  <button onclick="saveLinks()">💾 保存所有更改</button>
 
   <script>
     let links = [];
@@ -48,51 +47,60 @@
     }
 
     function renderTable() {
-      const tbody = document.getElementById('link-table-body');
-      tbody.innerHTML = '';
-      links.forEach((link, index) => {
-        const row = document.createElement('tr');
+      const tbody = document.querySelector("#linkTable tbody");
+      tbody.innerHTML = "";
+      links.forEach((link, i) => {
+        const row = document.createElement("tr");
+
         row.innerHTML = `
-          <td>${index}</td>
-          <td><input type="text" value="${link.remark || ''}" onchange="updateField(${index}, 'remark', this.value)" /></td>
-          <td><input type="text" value="${link.url}" onchange="updateField(${index}, 'url', this.value)" /></td>
+          <td>${i + 1}</td>
+          <td><input value="${link.name}" onchange="updateField(${i}, 'name', this.value)" /></td>
+          <td><input value="${link.url}" onchange="updateField(${i}, 'url', this.value)" /></td>
           <td>${link.clicks || 0}</td>
           <td class="actions">
-            <button onclick="removeLink(${index})">删除</button>
+            <button onclick="removeLink(${i})">🗑 删除</button>
           </td>
         `;
         tbody.appendChild(row);
       });
     }
 
-    function updateField(index, field, value) {
-      links[index][field] = value;
+    function updateField(index, key, value) {
+      links[index][key] = value;
     }
 
-    async function removeLink(index) {
+    function addLink() {
+      const name = document.getElementById("newName").value.trim();
+      const url = document.getElementById("newUrl").value.trim();
+      if (!name || !url.startsWith("http")) {
+        alert("请输入有效的名称和 URL");
+        return;
+      }
+      links.push({ name, url });
+      document.getElementById("newName").value = "";
+      document.getElementById("newUrl").value = "";
+      renderTable();
+    }
+
+    function removeLink(index) {
       links.splice(index, 1);
-      await saveLinks();
-    }
-
-    async function addLink() {
-      const remark = document.getElementById('new-remark').value.trim();
-      const url = document.getElementById('new-url').value.trim();
-      if (!url.startsWith('http')) return alert('URL 必须以 http/https 开头');
-      links.push({ url, remark });
-      document.getElementById('new-remark').value = '';
-      document.getElementById('new-url').value = '';
-      await saveLinks();
+      renderTable();
     }
 
     async function saveLinks() {
-      const payload = { links: links.map(l => ({ url: l.url, remark: l.remark || '' })) };
+      const cleaned = links.filter(l => l.name && l.url && l.url.startsWith("http"));
       const res = await fetch('/api/links', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ links: cleaned }),
       });
-      if (!res.ok) return alert('保存失败');
-      await fetchLinks();
+      const result = await res.json();
+      if (res.ok) {
+        alert("✅ 保存成功");
+        fetchLinks();
+      } else {
+        alert("❌ 保存失败: " + (result.error || "未知错误"));
+      }
     }
 
     fetchLinks();
