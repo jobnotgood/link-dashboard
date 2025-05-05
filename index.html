@@ -7,67 +7,88 @@
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
-      background-color: #f4f4f4;
+      background-color: #f7f7f7;
       margin: 0;
       padding: 20px;
     }
     .container {
-      max-width: 800px;
+      max-width: 900px;
       margin: auto;
       background: #fff;
-      padding: 20px;
-      border-radius: 10px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.1);
     }
     h2 {
       text-align: center;
       margin-bottom: 20px;
+      color: #3498db;
     }
     .current-target {
-      margin-bottom: 15px;
+      margin-bottom: 20px;
       font-weight: bold;
+      font-size: 16px;
+      color: #2c3e50;
     }
     .input-group {
       display: flex;
-      gap: 10px;
-      margin-bottom: 20px;
+      gap: 15px;
+      margin-bottom: 25px;
+      justify-content: space-between;
     }
     .input-group input {
       flex: 1;
-      padding: 10px;
+      padding: 12px;
       border: 1px solid #ccc;
-      border-radius: 6px;
+      border-radius: 8px;
+      font-size: 14px;
     }
     .input-group button {
-      padding: 10px 14px;
+      padding: 12px 20px;
       border: none;
       background-color: #3498db;
       color: white;
-      border-radius: 6px;
+      border-radius: 8px;
       cursor: pointer;
+      font-size: 14px;
+      transition: background-color 0.3s;
+    }
+    .input-group button:hover {
+      background-color: #2980b9;
     }
     .link-item {
-      margin-bottom: 12px;
-      padding: 12px;
-      border: 1px solid #e0e0e0;
+      margin-bottom: 18px;
+      padding: 20px;
       border-radius: 8px;
-      background: #fafafa;
+      background: #f9f9f9;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.05);
     }
-    .link-item input {
+    .link-item input, .link-item textarea {
       width: 100%;
-      margin-bottom: 8px;
-      padding: 8px;
-    }
-    .link-item textarea {
-      width: 100%;
-      margin-bottom: 8px;
-      padding: 8px;
-      height: 40px;
+      margin-bottom: 10px;
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid #ddd;
+      font-size: 14px;
     }
     .link-item a {
-      margin-right: 10px;
-      color: #2c3e50;
+      margin-right: 15px;
+      color: #3498db;
+      text-decoration: none;
+    }
+    .link-item a:hover {
       text-decoration: underline;
+    }
+    .link-item button {
+      padding: 8px 12px;
+      background-color: #e74c3c;
+      color: white;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+    }
+    .link-item button:hover {
+      background-color: #c0392b;
     }
     .loading, .error {
       text-align: center;
@@ -78,11 +99,17 @@
       display: block;
     }
     .chart-container {
-      margin-top: 40px;
-      padding: 20px;
-      background: #fefefe;
+      margin-top: 50px;
+      padding: 25px;
+      background: #fff;
       border: 1px solid #e0e0e0;
-      border-radius: 10px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .chart-container h3 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #3498db;
     }
   </style>
 </head>
@@ -102,7 +129,7 @@
     <div class="error" id="error"></div>
 
     <div class="chart-container">
-      <h3 style="text-align:center;margin-bottom:10px;">📈 点击趋势图（过去 7 天）</h3>
+      <h3>📈 点击趋势图（过去 7 天）</h3>
       <canvas id="clickChart" height="100"></canvas>
     </div>
   </div>
