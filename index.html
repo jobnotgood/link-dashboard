@@ -2,160 +2,104 @@
 <html lang="zh">
 <head>
   <meta charset="UTF-8" />
-  <title>链接池管理后台</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>链接管理后台</title>
   <style>
-    body {
-      font-family: sans-serif;
-      max-width: 900px;
-      margin: auto;
-      padding: 20px;
-    }
-    h1 {
-      text-align: center;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 20px;
-    }
-    table, th, td {
-      border: 1px solid #ddd;
-    }
-    th, td {
-      padding: 10px;
-      text-align: left;
-    }
-    input[type="text"] {
-      width: 100%;
-      box-sizing: border-box;
-    }
-    .actions {
-      display: flex;
-      gap: 10px;
-    }
-    button {
-      padding: 6px 12px;
-      cursor: pointer;
-    }
-    .success {
-      color: green;
-    }
-    .error {
-      color: red;
-    }
+    body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+    h1 { font-size: 24px; margin-bottom: 16px; }
+    table { border-collapse: collapse; width: 100%; background: white; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+    th { background-color: #eee; }
+    input[type="text"] { width: 100%; box-sizing: border-box; }
+    button { margin-top: 12px; padding: 8px 16px; font-size: 14px; }
   </style>
 </head>
 <body>
-  <h1>🔗 链接池管理后台</h1>
-
-  <div class="actions">
-    <button onclick="addRow()">➕ 添加链接</button>
-    <button onclick="saveLinks()">💾 保存修改</button>
-    <span id="status"></span>
-  </div>
-
-  <table id="linkTable">
+  <h1>🔗 链接管理后台</h1>
+  <table id="link-table">
     <thead>
       <tr>
         <th>#</th>
         <th>名称</th>
-        <th>跳转地址</th>
-        <th>点击量</th>
+        <th>跳转链接</th>
+        <th>点击次数</th>
         <th>操作</th>
       </tr>
     </thead>
-    <tbody></tbody>
+    <tbody id="link-tbody"></tbody>
   </table>
+  <button onclick="addRow()">➕ 添加新链接</button>
+  <button onclick="saveLinks()">💾 保存修改</button>
 
   <script>
-    const BASE_URL = "https://a-b-frosty-tree-ac99.youihim1234.workers.dev";
+    const apiBase = 'https://a-b-frosty-tree-ac99.youihim1234.workers.dev';
 
-    async function fetchLinks() {
-      try {
-        const res = await fetch(`${BASE_URL}/api/links`);
-        const data = await res.json();
-        if (!Array.isArray(data.links)) throw new Error("数据格式错误");
-        renderTable(data.links);
-      } catch (err) {
-        showStatus("❌ 获取链接失败：" + err.message, true);
-      }
-    }
-
-    function renderTable(links) {
-      const tbody = document.querySelector("#linkTable tbody");
-      tbody.innerHTML = "";
-      links.forEach((link, index) => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td>${index + 1}</td>
+    async function loadLinks() {
+      const res = await fetch(apiBase + '/api/links');
+      const data = await res.json();
+      const tbody = document.getElementById('link-tbody');
+      tbody.innerHTML = '';
+      data.links.forEach((link, idx) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${idx + 1}</td>
           <td><input type="text" value="${link.name || ''}" /></td>
           <td><input type="text" value="${link.url || ''}" /></td>
           <td>${link.clicks || 0}</td>
-          <td><button onclick="deleteRow(this)">🗑 删除</button></td>
+          <td><button onclick="deleteRow(this)">删除</button></td>
         `;
-        tbody.appendChild(tr);
+        tbody.appendChild(row);
       });
     }
 
     function addRow() {
-      const tbody = document.querySelector("#linkTable tbody");
-      const tr = document.createElement("tr");
-      const index = tbody.children.length + 1;
-      tr.innerHTML = `
-        <td>${index}</td>
-        <td><input type="text" value="" /></td>
-        <td><input type="text" value="" /></td>
+      const tbody = document.getElementById('link-tbody');
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${tbody.children.length + 1}</td>
+        <td><input type="text" placeholder="示例名称" /></td>
+        <td><input type="text" placeholder="https://..." /></td>
         <td>0</td>
-        <td><button onclick="deleteRow(this)">🗑 删除</button></td>
+        <td><button onclick="deleteRow(this)">删除</button></td>
       `;
-      tbody.appendChild(tr);
+      tbody.appendChild(row);
     }
 
     function deleteRow(btn) {
-      btn.closest("tr").remove();
-      updateIndices();
+      const row = btn.closest('tr');
+      row.remove();
+      refreshRowIndex();
     }
 
-    function updateIndices() {
-      document.querySelectorAll("#linkTable tbody tr").forEach((tr, i) => {
-        tr.children[0].innerText = i + 1;
-      });
+    function refreshRowIndex() {
+      const rows = document.querySelectorAll('#link-tbody tr');
+      rows.forEach((tr, i) => tr.children[0].textContent = i + 1);
     }
 
     async function saveLinks() {
-      const rows = document.querySelectorAll("#linkTable tbody tr");
-      const links = Array.from(rows).map(row => {
-        const [nameInput, urlInput] = row.querySelectorAll("input");
-        return { name: nameInput.value.trim(), url: urlInput.value.trim() };
-      });
-
-      try {
-        const res = await fetch(`${BASE_URL}/api/links`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ links })
-        });
-        const result = await res.json();
-        if (res.ok) {
-          showStatus("✅ 保存成功");
-          await fetchLinks(); // 重新拉取点击量
-        } else {
-          throw new Error(result.error || "保存失败");
+      const rows = document.querySelectorAll('#link-tbody tr');
+      const links = [];
+      for (const row of rows) {
+        const name = row.children[1].querySelector('input').value.trim();
+        const url = row.children[2].querySelector('input').value.trim();
+        if (name && url) {
+          links.push({ name, url });
         }
-      } catch (err) {
-        showStatus("❌ 保存失败：" + err.message, true);
+      }
+      const res = await fetch(apiBase + '/api/links', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ links })
+      });
+      if (res.ok) {
+        alert('保存成功 ✅');
+        loadLinks(); // 刷新点击数
+      } else {
+        alert('保存失败 ❌');
       }
     }
 
-    function showStatus(message, isError = false) {
-      const el = document.getElementById("status");
-      el.textContent = message;
-      el.className = isError ? "error" : "success";
-    }
-
-    // 初始化
-    fetchLinks();
+    loadLinks();
   </script>
 </body>
 </html>
