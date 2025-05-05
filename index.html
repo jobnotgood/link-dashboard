@@ -2,233 +2,158 @@
 <html lang="zh">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>链接池管理</title>
+  <title>链接池管理后台</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: "Segoe UI", sans-serif;
-      background-color: #f4f7fb;
-      display: flex; justify-content: center; align-items: center;
-      min-height: 100vh; padding: 20px;
+      font-family: sans-serif;
+      max-width: 900px;
+      margin: auto;
+      padding: 20px;
     }
-    .container {
-      background-color: #fff;
-      border-radius: 12px;
-      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
-      width: 100%; max-width: 880px;
-      padding: 40px 30px;
+    h1 {
+      text-align: center;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
       margin-top: 20px;
     }
-    h2 {
-      font-size: 1.8rem;
-      text-align: center;
-      margin-bottom: 20px;
-      color: #222;
+    table, th, td {
+      border: 1px solid #ddd;
     }
-    .current-target {
-      text-align: center;
-      color: #666;
-      margin-bottom: 20px;
-      font-size: 1.05rem;
-    }
-    .input-group {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 30px;
-      justify-content: space-between;
+    th, td {
+      padding: 10px;
+      text-align: left;
     }
     input[type="text"] {
-      flex: 1;
-      padding: 12px 16px;
-      font-size: 1rem;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      transition: 0.3s;
+      width: 100%;
+      box-sizing: border-box;
     }
-    input[type="text"]:focus {
-      border-color: #007bff;
-      outline: none;
+    .actions {
+      display: flex;
+      gap: 10px;
     }
     button {
-      background-color: #007bff;
-      color: white;
-      padding: 12px 20px;
-      border: none;
-      border-radius: 8px;
-      font-size: 1rem;
-      cursor: pointer;
-      transition: background-color 0.3s ease;
-    }
-    button:hover { background-color: #0056b3; }
-    .link-item {
-      background-color: #f9f9f9;
-      border-radius: 10px;
-      padding: 15px;
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 16px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    }
-    .link-item input, .link-item textarea {
-      flex: 1;
-      padding: 10px;
-      font-size: 0.95rem;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-    }
-    .link-item span {
-      font-size: 0.95rem;
-      color: #555;
-      white-space: nowrap;
-    }
-    .link-item button {
-      background-color: #dc3545;
       padding: 6px 12px;
-      border-radius: 6px;
-      font-size: 0.9rem;
+      cursor: pointer;
     }
-    .link-item button:hover {
-      background-color: #c82333;
+    .success {
+      color: green;
     }
-    .open-link {
-      text-decoration: none;
-      background-color: #28a745;
-      color: white;
-      padding: 8px 14px;
-      font-size: 0.9rem;
-      border-radius: 6px;
-    }
-    .open-link:hover { background-color: #218838; }
-    .loading, .error {
-      text-align: center;
-      margin-top: 15px;
-      font-size: 0.95rem;
-    }
-    .loading { color: #007bff; display: none; }
-    .loading.show { display: block; }
-    .error { color: #e74c3c; display: none; }
-    .error.show { display: block; }
-    /* Add responsiveness */
-    @media (max-width: 600px) {
-      .input-group {
-        flex-direction: column;
-      }
-      button {
-        width: 100%;
-        margin-top: 12px;
-      }
+    .error {
+      color: red;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h2>🔗 链接池管理</h2>
-    <div class="current-target" id="currentTarget">🎯 正在识别当前跳转链接…</div>
-    <div class="input-group">
-      <input type="text" id="newUrl" placeholder="请输入新链接（如：https://example.com）" />
-      <button onclick="addLink()">添加链接</button>
-      <button onclick="saveLinks()">保存更改</button>
-    </div>
+  <h1>🔗 链接池管理后台</h1>
 
-    <div id="linkList"></div>
-    <div class="loading" id="loading">加载中...</div>
-    <div class="error" id="error"></div>
+  <div class="actions">
+    <button onclick="addRow()">➕ 添加链接</button>
+    <button onclick="saveLinks()">💾 保存修改</button>
+    <span id="status"></span>
   </div>
 
+  <table id="linkTable">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>名称</th>
+        <th>跳转地址</th>
+        <th>点击量</th>
+        <th>操作</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
   <script>
-    const API = 'https://a-b-frosty-tree-ac99.youihim1234.workers.dev/api/links';
-    const API_TARGET = 'https://a-b-frosty-tree-ac99.youihim1234.workers.dev/api/target';
-    let links = [];
-
     async function fetchLinks() {
-      document.getElementById('loading').classList.add('show');
-      const res = await fetch(API);
-      const data = await res.json();
-      links = data.links || [];
-      renderList();
-      document.getElementById('loading').classList.remove('show');
-    }
-
-    async function fetchCurrentTarget() {
       try {
-        const res = await fetch(API_TARGET);
+        const res = await fetch('/api/links');
         const data = await res.json();
-        const label = data.target.url || '未知链接';
-        document.getElementById('currentTarget').textContent = `🎯 当前访问者将跳转到第 ${data.index + 1} 个链接：${label}`;
-      } catch {
-        document.getElementById('currentTarget').textContent = '⚠️ 无法获取当前跳转链接';
+        if (!Array.isArray(data.links)) throw new Error("数据格式错误");
+        renderTable(data.links);
+      } catch (err) {
+        showStatus("❌ 获取链接失败：" + err.message, true);
       }
     }
 
-    function renderList() {
-      const list = document.getElementById('linkList');
-      list.innerHTML = '';
+    function renderTable(links) {
+      const tbody = document.querySelector("#linkTable tbody");
+      tbody.innerHTML = "";
       links.forEach((link, index) => {
-        const div = document.createElement('div');
-        div.className = 'link-item';
-        div.innerHTML = `
-          <input type="text" value="${link.url}" onchange="updateLink(${index}, 'url', this.value)" />
-          <span>点击量：${link.clicks || 0}</span>
-          <textarea placeholder="备注" onchange="updateLink(${index}, 'remark', this.value)">${link.remark || ''}</textarea>
-          <a href="${link.url}" target="_blank" class="open-link">预览链接</a>
-          <button onclick="removeLink(${index})">删除</button>
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${index + 1}</td>
+          <td><input type="text" value="${link.name || ''}" /></td>
+          <td><input type="text" value="${link.url || ''}" /></td>
+          <td>${link.clicks || 0}</td>
+          <td><button onclick="deleteRow(this)">🗑 删除</button></td>
         `;
-        list.appendChild(div);
+        tbody.appendChild(tr);
       });
     }
 
-    function updateLink(index, field, value) {
-      links[index][field] = value;
+    function addRow() {
+      const tbody = document.querySelector("#linkTable tbody");
+      const tr = document.createElement("tr");
+      const index = tbody.children.length + 1;
+      tr.innerHTML = `
+        <td>${index}</td>
+        <td><input type="text" value="" /></td>
+        <td><input type="text" value="" /></td>
+        <td>0</td>
+        <td><button onclick="deleteRow(this)">🗑 删除</button></td>
+      `;
+      tbody.appendChild(tr);
     }
 
-    function addLink() {
-      const url = document.getElementById('newUrl').value.trim();
-      if (!url) return showError('请输入链接');
-      const urlRegex = /^https?:\/\/([\w-]+\.)+[\w-]+(\/[\w\-./?%&=]*)?$/;
-      if (!urlRegex.test(url)) return showError('请输入有效的URL');
-      links.push({ url });
-      document.getElementById('newUrl').value = '';
-      renderList();
+    function deleteRow(btn) {
+      btn.closest("tr").remove();
+      updateIndices();
     }
 
-    function removeLink(index) {
-      if (confirm('确定删除此链接吗？')) {
-        links.splice(index, 1);
-        renderList();
-      }
+    function updateIndices() {
+      document.querySelectorAll("#linkTable tbody tr").forEach((tr, i) => {
+        tr.children[0].innerText = i + 1;
+      });
     }
 
     async function saveLinks() {
-      document.getElementById('loading').classList.add('show');
-      const res = await fetch(API, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ links })
+      const rows = document.querySelectorAll("#linkTable tbody tr");
+      const links = Array.from(rows).map(row => {
+        const [nameInput, urlInput] = row.querySelectorAll("input");
+        return { name: nameInput.value.trim(), url: urlInput.value.trim() };
       });
-      const data = await res.json();
-      alert(data.message || '保存成功');
-      document.getElementById('loading').classList.remove('show');
-      await fetchLinks();
+
+      try {
+        const res = await fetch('/api/links', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ links })
+        });
+        const result = await res.json();
+        if (res.ok) {
+          showStatus("✅ 保存成功");
+          await fetchLinks(); // 重新拉取点击量
+        } else {
+          throw new Error(result.error || "保存失败");
+        }
+      } catch (err) {
+        showStatus("❌ 保存失败：" + err.message, true);
+      }
     }
 
-    function showError(message) {
-      const error = document.getElementById('error');
-      error.textContent = message;
-      error.classList.add('show');
-      setTimeout(() => error.classList.remove('show'), 3000);
+    function showStatus(message, isError = false) {
+      const el = document.getElementById("status");
+      el.textContent = message;
+      el.className = isError ? "error" : "success";
     }
 
-    document.getElementById('newUrl').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') addLink();
-    });
-
-    (async () => {
-      await fetchCurrentTarget();
-      await fetchLinks();
-    })();
+    // 初始化
+    fetchLinks();
   </script>
 </body>
 </html>
