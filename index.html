@@ -2,20 +2,22 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>链接池管理面板</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>链接池管理控制台</title>
   <style>
-    body { font-family: sans-serif; padding: 2rem; max-width: 800px; margin: auto; }
+    body { font-family: sans-serif; padding: 2rem; max-width: 900px; margin: auto; }
     h1 { font-size: 1.5rem; margin-bottom: 1rem; }
     table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; }
-    th, td { border: 1px solid #ddd; padding: 0.5rem; text-align: left; }
+    th, td { border: 1px solid #ccc; padding: 0.5rem; text-align: left; }
     input[type="text"] { width: 100%; padding: 0.4rem; }
-    button { padding: 0.3rem 0.7rem; margin: 0 0.2rem; }
+    button { padding: 0.4rem 0.7rem; margin: 0.2rem; cursor: pointer; }
     .actions { white-space: nowrap; }
+    .status { margin-top: 1rem; color: green; font-weight: bold; }
   </style>
 </head>
 <body>
-  <h1>🔗 链接池管理</h1>
+  <h1>🔗 链接池管理面板</h1>
+
   <table id="linkTable">
     <thead>
       <tr>
@@ -27,26 +29,40 @@
     </thead>
     <tbody></tbody>
   </table>
+
   <h2>➕ 添加新链接</h2>
-  <div>
-    <input id="newName" type="text" placeholder="名称" />
+  <div style="display: flex; gap: 0.5rem;">
+    <input id="newName" type="text" placeholder="名称 (如 Google)" />
     <input id="newURL" type="text" placeholder="https://example.com" />
     <button onclick="addLink()">添加</button>
   </div>
+
   <br />
   <button onclick="saveLinks()">💾 保存到 KV</button>
-  <p id="status"></p>
+  <p id="status" class="status"></p>
 
   <script>
     let links = [];
 
+    // 初始化加载链接池
     async function loadLinks() {
-      const res = await fetch('/api/links');
-      const data = await res.json();
-      links = data.links || [];
-      renderTable();
+      try {
+        const res = await fetch('/api/links');
+        const data = await res.json();
+        if (data.links && Array.isArray(data.links)) {
+          links = data.links;
+          renderTable();
+          document.getElementById('status').innerText = '✅ 已成功加载链接池';
+        } else {
+          document.getElementById('status').innerText = '⚠️ 获取数据失败';
+        }
+      } catch (err) {
+        console.error(err);
+        document.getElementById('status').innerText = '❌ 加载失败，请检查网络或接口状态';
+      }
     }
 
+    // 渲染表格
     function renderTable() {
       const tbody = document.querySelector('#linkTable tbody');
       tbody.innerHTML = '';
@@ -64,15 +80,17 @@
       });
     }
 
+    // 修改字段
     function updateField(index, field, value) {
       links[index][field] = value;
     }
 
+    // 添加新链接
     function addLink() {
       const name = document.getElementById('newName').value.trim();
       const url = document.getElementById('newURL').value.trim();
       if (!name || !url.startsWith('http')) {
-        alert('请输入有效的名称和 URL');
+        alert('请输入有效的名称和 URL（需以 http 开头）');
         return;
       }
       links.push({ name, url });
@@ -81,21 +99,29 @@
       renderTable();
     }
 
+    // 删除链接
     function removeLink(index) {
       links.splice(index, 1);
       renderTable();
     }
 
+    // 保存链接池到 KV
     async function saveLinks() {
-      const res = await fetch('/api/links', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ links }),
-      });
-      const result = await res.json();
-      document.getElementById('status').innerText = result.message || result.error || '保存完成';
+      try {
+        const res = await fetch('/api/links', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ links }),
+        });
+        const result = await res.json();
+        document.getElementById('status').innerText = result.message || '✅ 已保存成功';
+      } catch (err) {
+        console.error(err);
+        document.getElementById('status').innerText = '❌ 保存失败，请重试';
+      }
     }
 
+    // 页面加载时初始化
     loadLinks();
   </script>
 </body>
