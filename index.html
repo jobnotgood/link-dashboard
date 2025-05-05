@@ -2,23 +2,54 @@
 <html lang="zh">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>跳转链接列表</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>链接池统计</title>
   <style>
-    body { font-family: sans-serif; padding: 2em; background: #f9f9f9; }
-    table { border-collapse: collapse; width: 100%; }
-    th, td { padding: 0.75em; border: 1px solid #ccc; }
-    th { background: #eee; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      margin: 2rem;
+      background: #f6f8fa;
+      color: #333;
+    }
+    h1 {
+      font-size: 1.8rem;
+      margin-bottom: 1rem;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      background: #fff;
+    }
+    th, td {
+      padding: 0.75rem;
+      border: 1px solid #ddd;
+      text-align: left;
+    }
+    th {
+      background-color: #f0f0f0;
+    }
+    a {
+      color: #007bff;
+      text-decoration: none;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+    .error {
+      color: red;
+      margin-bottom: 1rem;
+    }
   </style>
 </head>
 <body>
-  <h1>📊 跳转链接池</h1>
+  <h1>📈 当前链接池</h1>
+  <div class="error" id="error"></div>
   <table id="linkTable">
     <thead>
       <tr>
         <th>#</th>
-        <th>名称</th>
-        <th>URL</th>
+        <th>备注</th>
+        <th>链接</th>
         <th>点击次数</th>
       </tr>
     </thead>
@@ -27,20 +58,28 @@
 
   <script>
     async function loadLinks() {
-      const res = await fetch('/api/links');
-      const data = await res.json();
-      const table = document.querySelector("#linkTable tbody");
-      table.innerHTML = "";
-      data.links.forEach((link, i) => {
-        const row = document.createElement("tr");
-        row.innerHTML = `
-          <td>${i + 1}</td>
-          <td>${link.name || '未命名'}</td>
-          <td><a href="${link.url}" target="_blank">${link.url}</a></td>
-          <td>${link.clicks || 0}</td>
-        `;
-        table.appendChild(row);
-      });
+      try {
+        const res = await fetch("/api/links");
+        if (!res.ok) throw new Error("接口响应失败");
+
+        const data = await res.json();
+        if (!Array.isArray(data.links)) throw new Error("数据结构异常");
+
+        const table = document.querySelector("#linkTable tbody");
+        table.innerHTML = "";
+        data.links.forEach((link, i) => {
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td>${i + 1}</td>
+            <td>${link.remark || '-'}</td>
+            <td><a href="${link.url}" target="_blank">${link.url}</a></td>
+            <td>${link.clicks || 0}</td>
+          `;
+          table.appendChild(row);
+        });
+      } catch (err) {
+        document.getElementById("error").textContent = "❌ 加载失败：" + err.message;
+      }
     }
 
     loadLinks();
