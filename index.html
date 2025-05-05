@@ -1,216 +1,49 @@
 <!DOCTYPE html>
 <html lang="zh">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>链接池管理后台</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            padding: 20px;
-        }
-
-        button {
-            padding: 10px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            cursor: pointer;
-            margin-bottom: 10px;
-        }
-
-        button:hover {
-            background-color: #45a049;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        table,
-        th,
-        td {
-            border: 1px solid #ddd;
-        }
-
-        th,
-        td {
-            padding: 8px;
-            text-align: left;
-        }
-
-        th {
-            background-color: #f2f2f2;
-        }
-
-        input[type="text"],
-        input[type="url"] {
-            width: 100%;
-            padding: 8px;
-            margin: 10px 0;
-        }
-
-        #addForm {
-            display: none;
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background-color: #fff;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-
-        #addForm form {
-            display: flex;
-            flex-direction: column;
-        }
-
-        #addForm button {
-            margin-top: 10px;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>跳转链接列表</title>
+  <style>
+    body { font-family: sans-serif; padding: 2em; background: #f9f9f9; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { padding: 0.75em; border: 1px solid #ccc; }
+    th { background: #eee; }
+  </style>
 </head>
-
 <body>
-    <h1>链接池管理后台</h1>
-    <button onclick="showAddForm()">添加链接</button>
+  <h1>📊 跳转链接池</h1>
+  <table id="linkTable">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>名称</th>
+        <th>URL</th>
+        <th>点击次数</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
 
-    <!-- 显示当前链接池 -->
-    <table id="linkTable">
-        <thead>
-            <tr>
-                <th>#</th>
-                <th>名称</th>
-                <th>URL</th>
-                <th>点击数</th>
-                <th>操作</th>
-            </tr>
-        </thead>
-        <tbody></tbody>
-    </table>
+  <script>
+    async function loadLinks() {
+      const res = await fetch('/api/links');
+      const data = await res.json();
+      const table = document.querySelector("#linkTable tbody");
+      table.innerHTML = "";
+      data.links.forEach((link, i) => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${i + 1}</td>
+          <td>${link.name || '未命名'}</td>
+          <td><a href="${link.url}" target="_blank">${link.url}</a></td>
+          <td>${link.clicks || 0}</td>
+        `;
+        table.appendChild(row);
+      });
+    }
 
-    <!-- 添加/编辑链接表单 -->
-    <div id="addForm" class="form-container">
-        <h2>添加/编辑链接</h2>
-        <form id="linkForm">
-            <label for="name">链接名称:</label>
-            <input type="text" id="name" name="name" required>
-
-            <label for="url">链接URL:</label>
-            <input type="url" id="url" name="url" required>
-
-            <button type="submit">保存链接</button>
-            <button type="button" onclick="closeForm()">取消</button>
-        </form>
-    </div>
-
-    <script>
-        const apiUrl = '/api/links'; // 假设API路径为 '/api/links'
-
-        // 显示/隐藏添加链接表单
-        function showAddForm() {
-            document.getElementById('addForm').style.display = 'block';
-        }
-
-        function closeForm() {
-            document.getElementById('addForm').style.display = 'none';
-        }
-
-        // 从后端获取链接池数据
-        async function loadLinks() {
-            try {
-                const res = await fetch(apiUrl);
-                const data = await res.json();
-                const tableBody = document.querySelector('#linkTable tbody');
-                tableBody.innerHTML = ''; // 清空表格内容
-
-                data.links.forEach((link, index) => {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td>${index + 1}</td>
-                        <td>${link.name}</td>
-                        <td><a href="${link.url}" target="_blank">${link.url}</a></td>
-                        <td>${link.clicks}</td>
-                        <td>
-                            <button onclick="editLink(${index})">编辑</button>
-                            <button onclick="deleteLink(${index})">删除</button>
-                        </td>
-                    `;
-                    tableBody.appendChild(row);
-                });
-            } catch (error) {
-                alert("无法加载链接池数据");
-            }
-        }
-
-        // 提交表单：新增或编辑链接
-        document.getElementById('linkForm').addEventListener('submit', async function (event) {
-            event.preventDefault();
-
-            const name = document.getElementById('name').value;
-            const url = document.getElementById('url').value;
-
-            const data = { links: [{ name, url }] }; // 只支持单个链接的添加/编辑
-
-            try {
-                const res = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data),
-                });
-
-                const result = await res.json();
-                if (res.ok) {
-                    alert(result.message || "操作成功");
-                    loadLinks();
-                    closeForm();
-                } else {
-                    alert(result.error || "操作失败");
-                }
-            } catch (error) {
-                alert("链接操作失败");
-            }
-        });
-
-        // 删除链接
-        async function deleteLink(index) {
-            try {
-                const res = await fetch(apiUrl, {
-                    method: 'DELETE',
-                    body: JSON.stringify({ index }),
-                });
-
-                const result = await res.json();
-                if (res.ok) {
-                    alert(result.message || "删除成功");
-                    loadLinks();
-                } else {
-                    alert(result.error || "删除失败");
-                }
-            } catch (error) {
-                alert("删除失败");
-            }
-        }
-
-        // 编辑链接
-        function editLink(index) {
-            const name = prompt("请输入新名称:");
-            const url = prompt("请输入新URL:");
-
-            if (name && url) {
-                document.getElementById('name').value = name;
-                document.getElementById('url').value = url;
-                showAddForm();
-            }
-        }
-
-        // 初始化页面
-        loadLinks();
-    </script>
+    loadLinks();
+  </script>
 </body>
-
 </html>
