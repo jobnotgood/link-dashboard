@@ -28,20 +28,28 @@
   <p class="dirty-alert" id="dirtyStatus"></p>
 
   <script>
-    const apiBase = "https://a-b-frosty-tree-ac99.youihim1234.workers.dev"; // ✅ 使用你的新 Worker 地址
+    const apiBase = "https://a-b-frosty-tree-ac99.youihim1234.workers.dev"; // 使用你的 Worker 地址
     let links = [];
     let dirty = false;
 
+    // 获取当前保存的链接
     async function fetchLinks() {
       if (dirty && !confirm("有未保存的更改，确定要放弃吗？")) return;
+
       const res = await fetch(`${apiBase}/api/links`);
       const data = await res.json();
-      links = data.links || [];
-      dirty = false;
-      renderLinks();
-      updateDirtyStatus();
+
+      if (res.ok) {
+        links = data.links || [];
+        dirty = false;
+        renderLinks();
+        updateDirtyStatus();
+      } else {
+        alert("❌ 获取链接失败: " + data.error);
+      }
     }
 
+    // 渲染链接列表
     function renderLinks() {
       const list = document.getElementById("linkList");
       list.innerHTML = "";
@@ -58,6 +66,7 @@
       });
     }
 
+    // 添加新链接
     function addLink() {
       const name = document.getElementById("newName").value.trim();
       const url = document.getElementById("newUrl").value.trim();
@@ -73,12 +82,14 @@
       document.getElementById("newUrl").value = "";
     }
 
+    // 编辑链接字段
     function editLink(index, field, value) {
       links[index][field] = value;
       dirty = true;
       updateDirtyStatus();
     }
 
+    // 删除链接
     function deleteLink(index) {
       if (!confirm("确定删除该链接？")) return;
       links.splice(index, 1);
@@ -87,6 +98,7 @@
       updateDirtyStatus();
     }
 
+    // 保存链接
     async function saveLinks() {
       try {
         const res = await fetch(`${apiBase}/api/links`, {
@@ -107,11 +119,13 @@
       }
     }
 
+    // 更新未保存的状态提示
     function updateDirtyStatus() {
       const status = document.getElementById("dirtyStatus");
       status.textContent = dirty ? "⚠️ 有未保存的更改" : "";
     }
 
+    // 防止页面刷新时丢失未保存的数据
     window.addEventListener("beforeunload", function (e) {
       if (dirty) {
         e.preventDefault();
@@ -119,7 +133,8 @@
       }
     });
 
-    fetchLinks(); // 页面加载时获取数据
+    // 页面加载时获取链接
+    fetchLinks(); 
   </script>
 </body>
 </html>
