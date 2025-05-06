@@ -1,132 +1,125 @@
 <!DOCTYPE html>
 <html lang="zh">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>链接池管理</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>链接管理后台</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 20px;
-      background-color: #f4f7f6;
-    }
-    h1 {
-      color: #333;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 20px;
-    }
-    table th, table td {
-      padding: 8px;
-      border: 1px solid #ddd;
-      text-align: left;
-    }
-    input[type="text"], input[type="url"] {
-      padding: 8px;
-      margin: 5px;
-      border: 1px solid #ddd;
-      width: 200px;
-    }
-    button {
-      padding: 8px 16px;
-      background-color: #4CAF50;
-      color: white;
-      border: none;
-      cursor: pointer;
-    }
-    button:hover {
-      background-color: #45a049;
-    }
+    body { font-family: sans-serif; max-width: 720px; margin: auto; padding: 2em; }
+    input { margin: 0.5em; padding: 0.3em; width: 40%; }
+    button { margin: 0.5em 0.5em 0.5em 0; padding: 0.4em 1em; }
+    .link-entry { margin: 1em 0; border-bottom: 1px solid #ddd; padding-bottom: 0.5em; }
+    .dirty-alert { color: red; font-weight: bold; }
   </style>
 </head>
 <body>
+  <h1>🔗 链接池管理</h1>
 
-  <h1>链接池管理</h1>
+  <h2>📃 当前链接列表</h2>
+  <div id="linkList"></div>
 
-  <h2>当前链接池</h2>
-  <table id="linkTable">
-    <thead>
-      <tr>
-        <th>链接名称</th>
-        <th>链接地址</th>
-        <th>点击次数</th>
-      </tr>
-    </thead>
-    <tbody>
-      <!-- 动态加载链接池 -->
-    </tbody>
-  </table>
-
-  <h2>添加新链接</h2>
-  <form id="linkForm">
-    <input type="text" id="linkName" placeholder="链接名称" required>
-    <input type="url" id="linkUrl" placeholder="链接地址" required>
-    <button type="submit">添加链接</button>
-  </form>
+  <h2>➕ 添加新链接</h2>
+  <input type="text" id="newName" placeholder="链接名称" />
+  <input type="url" id="newUrl" placeholder="https://example.com" />
+  <br/>
+  <button onclick="addLink()">添加</button>
+  <button onclick="saveLinks()">💾 保存所有更改</button>
+  <button onclick="fetchLinks()">🔄 重新加载已保存链接</button>
+  <p class="dirty-alert" id="dirtyStatus"></p>
 
   <script>
-    // 获取并展示链接池
+    const apiBase = "https://a-b-frosty-tree-ac99.youihim1234.workers.dev"; // ✅ 使用你的新 Worker 地址
+    let links = [];
+    let dirty = false;
+
     async function fetchLinks() {
+      if (dirty && !confirm("有未保存的更改，确定要放弃吗？")) return;
+      const res = await fetch(`${apiBase}/api/links`);
+      const data = await res.json();
+      links = data.links || [];
+      dirty = false;
+      renderLinks();
+      updateDirtyStatus();
+    }
+
+    function renderLinks() {
+      const list = document.getElementById("linkList");
+      list.innerHTML = "";
+      links.forEach((link, index) => {
+        const div = document.createElement("div");
+        div.className = "link-entry";
+        div.innerHTML = `
+          <input type="text" value="${link.name}" onchange="editLink(${index}, 'name', this.value)" />
+          <input type="url" value="${link.url}" onchange="editLink(${index}, 'url', this.value)" />
+          点击量：${link.clicks || 0}
+          <button onclick="deleteLink(${index})">🗑️ 删除</button>
+        `;
+        list.appendChild(div);
+      });
+    }
+
+    function addLink() {
+      const name = document.getElementById("newName").value.trim();
+      const url = document.getElementById("newUrl").value.trim();
+      if (!name || !url) {
+        alert("名称和 URL 不能为空");
+        return;
+      }
+      links.push({ name, url });
+      dirty = true;
+      renderLinks();
+      updateDirtyStatus();
+      document.getElementById("newName").value = "";
+      document.getElementById("newUrl").value = "";
+    }
+
+    function editLink(index, field, value) {
+      links[index][field] = value;
+      dirty = true;
+      updateDirtyStatus();
+    }
+
+    function deleteLink(index) {
+      if (!confirm("确定删除该链接？")) return;
+      links.splice(index, 1);
+      dirty = true;
+      renderLinks();
+      updateDirtyStatus();
+    }
+
+    async function saveLinks() {
       try {
-        const response = await fetch('/api/links');
-        const data = await response.json();
-
-        if (data.links && Array.isArray(data.links)) {
-          const tableBody = document.querySelector('#linkTable tbody');
-          tableBody.innerHTML = ''; // 清空表格内容
-
-          data.links.forEach(link => {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-              <td>${link.name}</td>
-              <td><a href="${link.url}" target="_blank">${link.url}</a></td>
-              <td>${link.clicks}</td>
-            `;
-            tableBody.appendChild(row);
-          });
+        const res = await fetch(`${apiBase}/api/links`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ links }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          alert("✅ 保存成功");
+          dirty = false;
+          fetchLinks(); // 重新拉取带 clickCount 的版本
+        } else {
+          alert("❌ 保存失败: " + data.error);
         }
-      } catch (error) {
-        alert('获取链接池失败');
+      } catch (err) {
+        alert("❌ 网络错误: " + err.message);
       }
     }
 
-    // 提交添加新链接的表单
-    document.querySelector('#linkForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
+    function updateDirtyStatus() {
+      const status = document.getElementById("dirtyStatus");
+      status.textContent = dirty ? "⚠️ 有未保存的更改" : "";
+    }
 
-      const linkName = document.querySelector('#linkName').value;
-      const linkUrl = document.querySelector('#linkUrl').value;
-
-      const newLink = {
-        name: linkName,
-        url: linkUrl,
-      };
-
-      try {
-        const response = await fetch('/api/links', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ links: [newLink] }),
-        });
-
-        const result = await response.json();
-        if (response.ok) {
-          alert('链接添加成功');
-          fetchLinks(); // 更新链接池
-        } else {
-          alert(`错误: ${result.error}`);
-        }
-      } catch (error) {
-        alert('添加链接失败');
+    window.addEventListener("beforeunload", function (e) {
+      if (dirty) {
+        e.preventDefault();
+        e.returnValue = "";
       }
     });
 
-    // 页面加载时获取并展示链接池
-    window.onload = fetchLinks;
+    fetchLinks(); // 页面加载时获取数据
   </script>
 </body>
 </html>
