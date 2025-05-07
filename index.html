@@ -3,37 +3,89 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>我的链接池</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Cloudflare Worker 分流测试</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            line-height: 1.6;
+            margin: 20px;
+        }
+        #results {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ccc;
+            background-color: #f9f9f9;
+            white-space: pre-wrap; /* 保留空白符和换行 */
+            word-wrap: break-word; /* 自动换行 */
+        }
+        button {
+            padding: 10px 15px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <h1>我的链接池</h1>
+    <h1>Cloudflare Worker 分流测试页面</h1>
 
-        <div class="add-link-form">
-            <h2>添加新链接</h2>
-            <div>
-                <label for="link-name">链接名称:</label>
-                <input type="text" id="link-name" placeholder="例如：Google">
-            </div>
-            <div>
-                <label for="link-url">链接地址:</label>
-                <input type="url" id="link-url" placeholder="例如：https://www.google.com/">
-            </div>
-            <button id="add-link-btn">添加链接</button>
-            <p id="form-message" class="message"></p>
-        </div>
+    <p>点击下方按钮向你的分流域名发送请求。</p>
 
-        <hr>
+    <button id="sendRequestBtn">发送请求</button>
 
-        <div class="link-list">
-            <h2>当前链接</h2>
-            <ul id="links-container">
-                </ul>
-            <p id="list-message" class="message"></p>
-        </div>
-    </div>
+    <h2>响应结果:</h2>
+    <pre id="results">点击按钮后会在这里显示结果...</pre>
 
-    <script src="script.js"></script>
+    <script>
+        // *** 请将这里替换为你配置了 Cloudflare Worker 的域名和路径 ***
+        const targetUrl = "https://your-worker-domain.com/test";
+        // 例如: "https://my-load-balanced-app.com/api/data"
+
+        const sendRequestBtn = document.getElementById('sendRequestBtn');
+        const resultsDiv = document.getElementById('results');
+
+        sendRequestBtn.addEventListener('click', async () => {
+            resultsDiv.textContent = '发送请求中...';
+
+            try {
+                // 使用 Fetch API 发送 GET 请求
+                const response = await fetch(targetUrl);
+
+                // 读取响应头部
+                let headersText = '';
+                response.headers.forEach((value, name) => {
+                    headersText += `${name}: ${value}\n`;
+                });
+
+                // 读取响应体
+                const responseBody = await response.text();
+
+                // 构建并显示结果
+                const resultText = `
+URL: ${targetUrl}
+状态码: ${response.status} ${response.statusText}
+响应头部:
+${headersText}
+
+响应体:
+${responseBody}
+                `;
+
+                resultsDiv.textContent = resultText;
+
+                // 如果响应状态码不是成功的范围 (200-299)，进行提示
+                if (!response.ok) {
+                    resultsDiv.textContent += `\n\n警告: 响应状态码不是成功状态 (${response.status})`;
+                    console.error('Request failed:', response.status, response.statusText);
+                } else {
+                     console.log('Request successful:', response.status);
+                }
+
+            } catch (error) {
+                // 处理请求过程中发生的错误 (例如网络错误)
+                resultsDiv.textContent = `请求失败: ${error}`;
+                console.error('Fetch error:', error);
+            }
+        });
+    </script>
 </body>
 </html>
