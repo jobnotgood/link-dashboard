@@ -6,29 +6,11 @@ const linksContainer = document.getElementById('links-container');
 const formMessage = document.getElementById('form-message');
 const listMessage = document.getElementById('list-message');
 
-// 数据存储键名
-const STORAGE_KEY = 'myLinkPoolLinks';
-
-// 从 localStorage 加载链接
-function loadLinks() {
-    const linksJson = localStorage.getItem(STORAGE_KEY);
-    try {
-        return linksJson ? JSON.parse(linksJson) : [];
-    } catch (e) {
-        console.error("Failed to parse links from localStorage:", e);
-        return []; // Return empty array if parsing fails
-    }
-}
-
-// 保存链接到 localStorage
-function saveLinks(links) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(links));
-}
-
-// 生成唯一的链接 ID (这里使用时间戳，简单但不保证绝对唯一性，生产环境建议 UUID)
-function generateId() {
-    return Date.now().toString();
-}
+// --- 配置项 ---
+// 你的 Cloudflare Worker API 的基础 URL (使用 workers.dev 地址)
+// 已经使用你提供的 Worker 名称和 workers.dev 子域名
+const BASE_API_URL = 'https://link-pool-api-worker.youihim1234.workers.dev/api/links';
+// --- 配置项结束 ---
 
 // 显示消息提示
 function showMessage(element, msg, type = '') {
@@ -46,11 +28,10 @@ function showMessage(element, msg, type = '') {
 }
 
 // 渲染链接列表
-function renderLinks() {
-    const links = loadLinks();
+function renderLinks(links) {
     linksContainer.innerHTML = ''; // 清空当前列表
 
-    if (links.length === 0) {
+    if (!links || links.length === 0) {
         listMessage.textContent = '链接池为空，快来添加第一个链接吧！';
         listMessage.className = 'no-links-message'; // 使用特定的无链接样式
         listMessage.style.display = 'block';
@@ -62,7 +43,7 @@ function renderLinks() {
 
     links.forEach(link => {
         const listItem = document.createElement('li');
-        // 使用 data-id 存储链接 ID，方便删除操作时获取
+        // 使用 data-id 存储链接 ID
         listItem.dataset.id = link.id;
 
         const linkAnchor = document.createElement('a');
@@ -72,7 +53,7 @@ function renderLinks() {
 
         const deleteButton = document.createElement('button');
         deleteButton.textContent = '删除';
-        // 删除按钮的点击事件会在这里由事件委托处理，见后面的代码
+        // 删除按钮的点击事件会在这里由事件委托处理
 
         listItem.appendChild(linkAnchor);
         listItem.appendChild(deleteButton);
@@ -80,8 +61,41 @@ function renderLinks() {
     });
 }
 
+// 从 API 获取并渲染链接
+async function fetchAndRenderLinks() {
+    listMessage.textContent = '正在加载链接...'; // 显示加载状态
+    listMessage.className = 'message';
+    listMessage.style.display = 'block';
+
+
+    try {
+        const response = await fetch(BASE_API_URL);
+
+        if (!response.ok) {
+             // Handle HTTP errors (e.g., 404, 500)
+             const errorBody = await response.text(); // Try to read error body
+             throw new Error(`HTTP error! status: ${response.status}, body: ${errorBody}`);
+        }
+
+        const links = await response.json();
+        renderLinks(links); // 渲染获取到的链接
+        // 清除加载消息或显示成功
+        if (links.length > 0) {
+             listMessage.style.display = 'none'; // 有链接时隐藏消息
+        } else {
+             // 如果没有链接，renderLinks 会显示 '链接池为空' 的消息，所以这里不用额外处理
+        }
+
+
+    } catch (error) {
+        console.error("Failed to fetch links:", error);
+        showMessage(listMessage, `加载链接失败: ${error.message}`, 'error');
+        renderLinks([]); // 清空列表或显示空状态
+    }
+}
+
 // 添加链接的逻辑
-function addLink() {
+async function addLink() {
     const name = linkNameInput.value.trim();
     const url = linkUrlInput.value.trim();
 
@@ -90,7 +104,7 @@ function addLink() {
         return;
     }
 
-    // 简单的 URL 格式验证（可以更复杂）
+    // 简单的 URL 格式验证
     try {
         new URL(url);
     } catch (e) {
@@ -98,44 +112,85 @@ function addLink() {
         return;
     }
 
+    addLinkBtn.disabled = true; // 添加过程中禁用按钮
+    showMessage(formMessage, '正在添加链接...', ''); // 显示添加中状态
 
-    const links = loadLinks();
-
-    const newLink = {
-        id: generateId(),
-        name: name, // 保存用户输入的名称，即使为空字符串
+    const newLinkData = {
+        name: name,
         url: url
     };
 
-    links.push(newLink);
-    saveLinks(links);
-    renderLinks(); // 重新渲染列表
+    try {
+        const response = await fetch(BASE_API_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(newLinkData)
+        });
 
-    // 清空输入框
-    linkNameInput.value = '';
-    linkUrlInput.value = '';
+         if (!response.ok) {
+              const errorBody = await response.text();
+              throw new Error(`HTTP error! status: ${response.status}, body: ${errorBody}`);
+         }
 
-    showMessage(formMessage, '链接添加成功！', 'success');
+
+        const addedLink = await response.json(); // API 应该返回新添加的链接对象
+
+        // 重新获取并渲染所有链接，确保列表最新
+        await fetchAndRenderLinks();
+
+        // 清空输入框
+        linkNameInput.value = '';
+        linkUrlInput.value = '';
+
+        showMessage(formMessage, '链接添加成功！', 'success');
+
+    } catch (error) {
+        console.error("Failed to add link:", error);
+        showMessage(formMessage, `添加链接失败: ${error.message}`, 'error');
+    } finally {
+        addLinkBtn.disabled = false; // 添加完成后启用按钮
+    }
 }
 
 // 删除链接的逻辑
-function deleteLink(id) {
-    let links = loadLinks();
-    // 过滤掉需要删除的链接
-    const updatedLinks = links.filter(link => link.id !== id);
+async function deleteLink(id) {
+     // 可以在这里添加确认对话框
+     // if (!confirm('确定要删除这个链接吗？')) {
+     //     return;
+     // }
 
-    if (updatedLinks.length < links.length) { // 确保确实删除了一个链接
-        saveLinks(updatedLinks);
-        renderLinks(); // 重新渲染列表
+    showMessage(listMessage, '正在删除链接...', ''); // 显示删除中状态
+
+    try {
+        // 构建删除特定链接的 URL
+        const deleteUrl = `${BASE_API_URL}/${id}`;
+        const response = await fetch(deleteUrl, {
+            method: 'DELETE',
+            // DELETE 请求通常不需要请求体
+        });
+
+        if (!response.ok) {
+             const errorBody = await response.text();
+             throw new Error(`HTTP error! status: ${response.status}, body: ${errorBody}`);
+        }
+
+        // 删除成功后，重新获取并渲染所有链接
+        await fetchAndRenderLinks();
+
         showMessage(listMessage, '链接删除成功！', 'success');
-    } else {
-         showMessage(listMessage, '未找到指定的链接进行删除！', 'error');
+
+    } catch (error) {
+        console.error("Failed to delete link:", error);
+        showMessage(listMessage, `删除链接失败: ${error.message}`, 'error');
     }
 }
 
 // 初始化函数
 function init() {
-    renderLinks(); // 页面加载时先渲染一次现有链接
+    // 页面加载时从 API 获取并渲染链接
+    fetchAndRenderLinks();
 
     // 为添加按钮绑定点击事件
     addLinkBtn.addEventListener('click', addLink);
