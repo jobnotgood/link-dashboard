@@ -1,127 +1,39 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
-  <title>我的 A/B 测试页面</title>
-  <style>
-    /* 添加 CSS 规则，默认隐藏所有 A/B 变体元素 */
-    .ab-variant {
-      display: none;
-    }
-    /* 可选：如果你需要一个默认显示的原始版本，可以不隐藏它，或者也给它一个类，然后通过 JS 控制 */
-     #variant-original {
-       /* display: block; /* 或者你的默认显示样式 */
-     }
-  </style>
-   </head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的链接池</title>
+    <link rel="stylesheet" href="style.css">
+</head>
 <body>
+    <div class="container">
+        <h1>我的链接池</h1>
 
-  <h1>欢迎来到我的网站!</h1>
+        <div class="add-link-form">
+            <h2>添加新链接</h2>
+            <div>
+                <label for="link-name">链接名称:</label>
+                <input type="text" id="link-name" placeholder="例如：Google">
+            </div>
+            <div>
+                <label for="link-url">链接地址:</label>
+                <input type="url" id="link-url" placeholder="例如：https://www.google.com/">
+            </div>
+            <button id="add-link-btn">添加链接</button>
+            <p id="form-message" class="message"></p>
+        </div>
 
-  <div id="variant-original" class="ab-variant">
-      <p>这是原始的段落文本。</p>
-      <button>了解更多</button>
-  </div>
+        <hr>
 
-  <div id="variant-a" class="ab-variant">
-      <h2>A 组独有的标题！</h2>
-      <p>这是为 A 组用户准备的特别描述。</p>
-      <button style="background-color: green;">立即行动 (A)</button>
-  </div>
+        <div class="link-list">
+            <h2>当前链接</h2>
+            <ul id="links-container">
+                </ul>
+            <p id="list-message" class="message"></p>
+        </div>
+    </div>
 
-  <div id="variant-b" class="ab-variant">
-      <h2>B 组独有的标题！</h2>
-      <p>这是为 B 组用户准备的另一种描述。</p>
-      <button style="background-color: blue;">开始体验 (B)</button>
-  </div>
-
-  <p>这部分内容对所有用户都相同。</p>
-
-  <script>
-      // --- 前端 A/B 测试逻辑 ---
-      // 函数：从 Cookie 中获取值
-      function getCookie(name) {
-        const value = `; ${document.cookie}`;
-        const parts = value.split(`; ${name}=`);
-        if (parts.length === 2) return parts.pop().split(';').shift();
-        return null;
-      }
-
-      // --- 配置项 (确保与 Cloudflare Worker 中的一致) ---
-      const AB_COOKIE_NAME = 'ab_test_group'; // Cookie 名称
-      const testName = 'Homepage_Section_Test'; // 给你的 A/B 测试起个名字用于分析
-
-      // --- 逻辑开始 ---
-      // 默认隐藏所有变体，防止闪烁问题（如果 CSS 设置失败的话）
-      // 注意：更好的做法是在 CSS 中默认隐藏，JS 只负责显示
-      // document.querySelectorAll('.ab-variant').forEach(el => el.style.display = 'none');
-
-
-      // 获取 A/B 分组 (使用你在 Worker 中设置的 Cookie 名称)
-      const abGroup = getCookie(AB_COOKIE_NAME);
-
-      console.log('User is in group:', abGroup); // 可以在浏览器控制台看到分组信息
-
-      // 根据分组显示对应的页面元素
-      if (abGroup) {
-        const variantElement = document.getElementById(`variant-${abGroup.toLowerCase()}`);
-        const originalElement = document.getElementById('variant-original'); // 获取原始版本元素
-
-        // 隐藏所有变体，然后显示当前分组的变体
-        document.querySelectorAll('.ab-variant').forEach(el => el.style.display = 'none');
-
-        if (variantElement) {
-          variantElement.style.display = 'block'; // 显示当前分组的元素
-        } else if (originalElement) {
-            // 如果 Worker 设置了分组但没找到对应的元素ID (例如 Worker 设置了 'C' 组，但只有 A/B 元素)，显示原始版本
-             originalElement.style.display = 'block';
-             console.warn(`Element for variant-${abGroup.toLowerCase()} not found. Showing original.`);
-        } else {
-             console.error(`Element for variant-${abGroup.toLowerCase()} not found and no original element.`);
-             // 如果连原始版本都没有，页面可能显示空白区域
-        }
-
-        // 可选：发送分组信息给你的分析平台 (例如 Google Analytics 4)
-        // 假设你已经在 head 中配置了 gtag.js 或其他分析代码
-         if (typeof gtag === 'function') {
-              gtag('event', 'ab_test_variant_view', {
-                  'ab_test_name': testName,
-                  'ab_test_variant': abGroup
-              });
-              // 或者添加到用户属性（这个更常用，表示用户属于哪个组）
-               gtag('set', {
-                'user_properties': {
-                  'ab_test_group': abGroup,
-                  'ab_test_name': testName
-                }
-              });
-         }
-
-
-      } else {
-          // 如果出于某种原因没有获取到 Cookie（例如 Worker 配置错误或首次访问 Worker 未触发），显示原始版本或默认内容
-          console.warn('AB test cookie not found. Showing original or default content.');
-          const originalElement = document.getElementById('variant-original');
-           // 隐藏所有变体，然后显示原始版本（如果存在）
-          document.querySelectorAll('.ab-variant').forEach(el => el.style.display = 'none');
-          if(originalElement) {
-               originalElement.style.display = 'block';
-          }
-           // 可选：标记为未分组或默认组
-            if (typeof gtag === 'function') {
-                 gtag('event', 'ab_test_variant_view', {
-                     'ab_test_name': testName,
-                     'ab_test_variant': 'default' // 标记为默认组
-                 });
-                 gtag('set', {
-                 'user_properties': {
-                     'ab_test_group': 'default',
-                     'ab_test_name': testName
-                 }
-                 });
-            }
-      }
-      // --- 前端 A/B 测试逻辑结束 ---
-  </script>
-
+    <script src="script.js"></script>
 </body>
 </html>
